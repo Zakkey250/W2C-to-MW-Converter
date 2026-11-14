@@ -1,0 +1,12 @@
+/build/
+/third_party/NFSPluginSDK/
+/compiler/source-world/vendor/**/*.cs
+**/__pycache__/
+**/bin/
+**/obj/
+*.log
+*.pdb
+*.exe
+*.dll
+*.zip
+*.tmp

@@ -1,0 +1,9 @@
+Unicorn Engine 2.1.4
+
+Source and build scripts for the bundled, unmodified engine:
+https://github.com/unicorn-engine/unicorn/tree/2.1.4
+
+Upstream Python distribution:
+https://pypi.org/project/unicorn/2.1.4/
+
+See Unicorn-COPYING.txt.

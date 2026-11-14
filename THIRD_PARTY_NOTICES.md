@@ -1,0 +1,7 @@
+# Third-party components
+
+- The x86 ASI uses [MinHook](https://github.com/TsudaKageyu/minhook) (BSD 2-Clause), [NFSPluginSDK](https://github.com/berkayylmao/NFSPluginSDK) (BSD 3-Clause at the revision in BUILD.md), LZ4 (BSD 2-Clause), and nlohmann/json (MIT). The x64 repacker uses the LZ4 block codec. Licenses for the pinned vendored sources are next to them; the NFSPluginSDK notice is included in the binary ZIP.
+- The converter UI and rollback tool embed CPython and use PyInstaller. The camera decoder runs separate, unmodified CPython and an unmodified Unicorn Engine 2.1.4 build; the [Unicorn source and build instructions](https://github.com/unicorn-engine/unicorn/tree/2.1.4) are available upstream. Dependency licenses are in the release ZIP's `notices` directory.
+- The release package includes a .NET x86 runtime in the converter's PublicVault helper. At conversion time the optional Carbon path uses the user's OGVI/Attribulator assemblies. Neither tool's binaries are shipped in this distribution.
+- SourceWorld uses pinned NFS-ModTools/CompLib source only during the user-initiated local build. There is no prebuilt copy or upstream source copy in this release.
+- Game files, W2C, Carbon, SunSet, TexWizard, Ultimate ASI Loader, and conversion output are obtained separately. The converter includes its own setup preset and compact road coverage reference. See the README for credits and links.

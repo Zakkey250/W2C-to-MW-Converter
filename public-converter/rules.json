@@ -1,0 +1,45 @@
+{
+  "collisionSurfaces": {
+    "materials": {
+      "00000000": "asphalt_no_leaves",
+      "02fc0fc9": "stone",
+      "05173529": "gravel",
+      "09ebff97": "grass",
+      "121453e7": "railroad",
+      "19db2f1e": "asphalt",
+      "1a20e734": "golf_fairway",
+      "1d5f6d70": "glass",
+      "35187254": "asphalt_no_leaves",
+      "3830babb": "cobble",
+      "3e25caab": "golf_rough",
+      "40afea0b": "asphalt_no_leaves",
+      "52e42012": "wood",
+      "58ec09dd": "grass_shoulder",
+      "6ca26f9b": "concrete",
+      "6d30229b": "asphalt",
+      "772fb736": "grass",
+      "7cbf9ddd": "asphalt_no_leaves",
+      "999acd78": "sand",
+      "a3840311": "golf_green",
+      "a5837e19": "asphalt",
+      "ba404853": "metal",
+      "bb759ab2": "wood",
+      "c0625782": "asphalt",
+      "c1c577d6": "gravel",
+      "d929e923": "dirt",
+      "ef405bc5": "snow"
+    },
+    "concreteWallOnly": ["e3fa5da5"]
+  },
+  "map": {
+    "schema": 1,
+    "sourceSha256": "ff1aea750de167ee8f8d1ad47bd904268d22cd7ef75a7d64885764392aaa8fc7",
+    "roadGraphSha256": "b291aa3462f425aa2c5a911789a2dac1a0f8f0773487db1d7bc022a5e16356ef",
+    "parameters": [0.16269161597134535, 108.74463293403112, 0.16275465433029174, 1206.141681037347]
+  },
+  "mwInputs": {
+    "TRACKS/L2RA.BUN": "b4da68460c9f642c76e2d603d3d50c6036f0c393bbdb11c7cb5ed690f7fd70d8",
+    "TRACKS/STREAML2RA.BUN": "15016611bcb7511d255c092321f87c659b101910c054aba8b750d722036c111a",
+    "GLOBAL/InGameA.bun": "f65f05ef2ccea60a284af6c26923e55a95161f9ace7390dbbf237b964950b51d"
+  }
+}

@@ -1,0 +1,66 @@
+Config:
+  Console: false
+  ShaderLoader: true
+  ShaderCompiler: false
+  X360Effects: false
+  LiveReload: false
+  Editor: false
+  SkipFE: false
+  CarVinylPaintFix: true
+  BrakeGlow: true
+  GodRays: true
+  Bloom: false
+  RealFeReflections: true
+  WorldVertexColor: false
+  CarVertexColor: true
+  TunnelWetnessFix: true
+  TunnelLightIntensity: true
+  DisableNightShadows: true
+  MSAAx8: false
+  CustomMeshDist: 500
+  MaxLights: -1
+  FlareDistance: 700.0
+  DisableSunFlare: true
+  RoadblockLights: false
+  EditorScale: 1.0
+  Exposure: false
+  NosLight: false
+  NosEmmiter: false
+  NosFix: true
+Time:
+  ForceTime: -1.0
+  TimeUpdateRate: 1.0
+  LightsOn: 0.65
+  LightsOff: 0.24
+  WetTime: 2.0
+  DryTime: 30.0
+  RandomStartupTime: true
+  RealTime: false
+  SunAzimuth: 0.0
+  RandomWindows: true
+Blur:
+  MinSpeed: 25.0
+  MaxSpeed: 325.0
+  Depth: 150.0
+Hotkeys:
+  ShaderReload: 0
+  ToggleEditor: 114
+Rain:
+  DryTime: 10.0
+  DryTimeRandom: 5.0
+  LightTime: 1.0
+  LightTimeRandom: 1.0
+  HeavyTime: 3.0
+  HeavyTimeRandom: 3.0
+  LightningTimeOut: 15.0
+  RainCloudsTexture: true
+WindowGlow:
+  Override: true
+  Color:
+  - 1.0
+  - 0.8
+  - 0.6
+  Power: 5
+Filter:
+  Texture: FILTER_CARBON2
+  Power: 0.5

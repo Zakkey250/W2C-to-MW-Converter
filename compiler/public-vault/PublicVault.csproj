@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <RuntimeFrameworkVersion>8.0.29</RuntimeFrameworkVersion>
+    <SelfContained>true</SelfContained>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <VaultToolReference Condition="'$(VaultToolReference)' == ''">../../../tools/OGVI-1.4/release_windows</VaultToolReference>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="VaultLib.Core" HintPath="$(VaultToolReference)/VaultLib.Core.dll" Private="false" />
+    <Reference Include="VaultLib.Support.MostWanted" HintPath="$(VaultToolReference)/plugins/Attribulator.Plugins.SpeedProfiles/VaultLib.Support.MostWanted.dll" Private="false" />
+    <Reference Include="VaultLib.Support.Carbon" HintPath="$(VaultToolReference)/plugins/Attribulator.Plugins.SpeedProfiles/VaultLib.Support.Carbon.dll" Private="false" />
+    <Reference Include="CoreLibraries.Data" HintPath="$(VaultToolReference)/CoreLibraries.Data.dll" Private="false" />
+    <Reference Include="CoreLibraries.IO" HintPath="$(VaultToolReference)/CoreLibraries.IO.dll" Private="false" />
+  </ItemGroup>
+</Project>

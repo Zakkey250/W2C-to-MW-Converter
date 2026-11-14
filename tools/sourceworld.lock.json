@@ -1,0 +1,871 @@
+{
+  "archives": [
+    {
+      "commit": "897c170eececb6f0f31c1925c2db4160d135c3b5",
+      "group": "Common",
+      "name": "modtools-source.zip",
+      "sha256": "55c3f79cde6efdcb8bc3c42da3c950c58f1a0c1e9de1e29d416dc3d171c9d491"
+    },
+    {
+      "commit": "4dfa753105e771c15b1ff66e47f93a367bf72a7c",
+      "group": "CompLib",
+      "name": "complib-source.zip",
+      "sha256": "e1ff85648ace56bda0dba6db5e817e43143bc20794fe715492269fc83b6980ac"
+    }
+  ],
+  "files": {
+    "Common/BasicResource.cs": [
+      "ef59da6ec9a6119b5de9db173b960525b70bde4fc1ac6b98f539bd67b8099018",
+      []
+    ],
+    "Common/BinaryUtil.cs": [
+      "a833ed2d5b3a9a29d826f2322ad04f26711507a9377c3bd6b52c8127c2ccf040",
+      []
+    ],
+    "Common/Chunk.cs": [
+      "3e6a0daf4ce1b71953e0c43a1fee9435b1d3090050104fe590c06823a986b50d",
+      []
+    ],
+    "Common/ChunkManager.cs": [
+      "f7f1207af932af65f30935d9726a0c591f578dcec5ec0b60fce3871e762ec594",
+      [
+        [
+          1449,
+          1449,
+          "        // Carbon installations also contain version-5 legacy TPKs. Select by\n        // on-disk version, rather than interpreting their records as v8.\n        private uint ReadTextureVersion(long end)\n        {\n            while (Stream.Position < end)\n            {\n                if (end - Stream.Position < 8) throw new InvalidDataException(\"TPK header truncated\");\n                uint kind = Reader.ReadUInt32(), bytes = Reader.ReadUInt32();\n                long stop = checked(Stream.Position + bytes);\n                if (stop > end) throw new InvalidDataException(\"TPK header range\");\n                if (kind == 0x33310001)\n                {\n                    if (bytes < 4) throw new InvalidDataException(\"TPK version truncated\");\n                    return Reader.ReadUInt32();\n                }\n                if ((kind & 0x80000000) != 0)\n                {\n                    uint found = ReadTextureVersion(stop);\n                    if (found != 0) return found;\n                }\n                Stream.Position = stop;\n            }\n            return 0;\n        }\n\n"
+        ],
+        [
+          4266,
+          4266,
+          "\n                        if (_game == GameDetector.Game.Carbon)\n                        {\n                            long saved = Stream.Position;\n                            uint version = ReadTextureVersion(checked(saved + chunk.Length));\n                            Stream.Position = saved;\n                            tpkManager = version switch\n                            {\n                                8 => new Version3Tpk(),\n                                5 => new Version2Tpk(),\n                                _ => throw new InvalidDataException($\"Unsupported source TPK version {version}\")\n                            };\n                        }\n"
+        ],
+        [
+          7771,
+          7771,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/ChunkStream.cs": [
+      "cbabbc8ca83ecd1452dc154cb5a43fa0f2c0a3c424243c8442991a606163108e",
+      []
+    ],
+    "Common/Compression.cs": [
+      "b7675f4cc91c6552665e98692884da45de6c525badc1be3d6c7be65d23a37422",
+      [
+        [
+          281,
+          285,
+          ""
+        ],
+        [
+          429,
+          429,
+          "long end = checked(src.Position + srcSize), decompressedSize = 0;\n            using var br = new BinaryReader(src, System.Text.Encoding.UTF8, true);\n            while (src.Position < end)\n            {\n                long start = src.Position;\n                uint magic = br.ReadUInt32();\n                int usize = br.ReadInt32(), csize = br.ReadInt32(), upos = br.ReadInt32();\n                int cpos = br.ReadInt32(), zero = br.ReadInt32();\n                if (magic != 0x55441122 || csize < 24 || start + csize > end || usize < 0 || upos < 0)\n                    throw new InvalidDataException(\"Invalid "
+        ],
+        [
+          430,
+          430,
+          "IP block\");\n                byte[] compressed = br.ReadBytes(cs"
+        ],
+        [
+          431,
+          431,
+          "ze - 24);\n                if (com"
+        ],
+        [
+          432,
+          432,
+          "ressed.Length != csize - 24) throw new EndOfStreamException();\n                var result = "
+        ],
+        [
+          456,
+          456,
+          "compre"
+        ],
+        [
+          457,
+          457,
+          "sed);\n                if ("
+        ],
+        [
+          458,
+          458,
+          "esult.Length != usize) throw new InvalidDataEx"
+        ],
+        [
+          459,
+          460,
+          "eption(\"CIP size mismatch\");\n               "
+        ],
+        [
+          464,
+          465,
+          ".Position"
+        ],
+        [
+          466,
+          466,
+          "= upo"
+        ],
+        [
+          467,
+          467,
+          ";\n                dst.W"
+        ],
+        [
+          468,
+          470,
+          ""
+        ],
+        [
+          471,
+          472,
+          "t"
+        ],
+        [
+          473,
+          474,
+          "(result);\n"
+        ],
+        [
+          475,
+          478,
+          ""
+        ],
+        [
+          479,
+          482,
+          "             "
+        ],
+        [
+          499,
+          500,
+          " += result.Length"
+        ],
+        [
+          502,
+          502,
+          "            }\n            dst.Position = 0;\n"
+        ],
+        [
+          557,
+          557,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/GameDetector.cs": [
+      "2714a281c39b80366638f724124707bcf4b5de8a99e8f23ee9c71b53be162351",
+      []
+    ],
+    "Common/Geometry/CarbonSolidListReader.cs": [
+      "f6ff8a3375e0160983a21a46b3f953a077ef3b5d93dde4b3b2db6301f2b9a196",
+      [
+        [
+          264,
+          264,
+          "        public uint IndexStart { get; set; }\n"
+        ],
+        [
+          4007,
+          4007,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Geometry/CarbonSolidReader.cs": [
+      "271672e32843e2fae04d46d185df26eb5cc3dccef399db029953e56ddca8f194",
+      [
+        [
+          5118,
+          5118,
+          "        long indexBase = binaryReader.BaseStream.Position;\n"
+        ],
+        [
+          5178,
+          5178,
+          "            binaryReader.BaseStream.Position = indexBase + ((CarbonMaterial)material).IndexStart * 2L;\n"
+        ],
+        [
+          6456,
+          6456,
+          "                IndexStart = shadingGroup.IndexOffset,\n"
+        ],
+        [
+          15698,
+          15698,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Geometry/Data/CarbonObject.cs": [
+      "9b78117854cea6418d270a8d010864083b317866856e8af959aa09864f96f750",
+      []
+    ],
+    "Common/Geometry/Data/IEffectBasedMaterial.cs": [
+      "17bfa7690aced2b8a9f3fb9ef0f82f3b3d87ec719f874862aa9aed9ddf064d2f",
+      []
+    ],
+    "Common/Geometry/Data/IMorphableSolid.cs": [
+      "fd88ce3c518e7b01ed96c99f3bfc783f2c027c69de22885b8708bffcac9c00bd",
+      []
+    ],
+    "Common/Geometry/Data/ISortedMaterial.cs": [
+      "e526cc652ce0804cf288bcee4b6b5cd8721bb71e99c474d5e4b862da83c1c70d",
+      []
+    ],
+    "Common/Geometry/Data/MostWantedObject.cs": [
+      "d3109501bda9edf3fd7e9c982f79a3682c8651dac05b9d3db4e5faa31d78cfe6",
+      []
+    ],
+    "Common/Geometry/Data/ProStreetObject.cs": [
+      "e14a79819468bcd8433617d55a2568db90f7e39ef0d1983e4bbc1ca23474e9d3",
+      []
+    ],
+    "Common/Geometry/Data/SolidList.cs": [
+      "fa575882f8e53c1a8be461f59a283f7d78c9a3cebfbfe74c8aa2121d1b6f4cf0",
+      []
+    ],
+    "Common/Geometry/Data/SolidMeshVertex.cs": [
+      "23372f0416175ead7df102995105c7d7bab98c9222f2c88e39d309fdc025b3fb",
+      []
+    ],
+    "Common/Geometry/Data/SolidObject.cs": [
+      "1ef5e54d339a164aecc118f7a617899bf8fe1279f3d8f6d6d71b63589f45bc96",
+      [
+        [
+          0,
+          1,
+          ""
+        ],
+        [
+          351,
+          351,
+          "        public List<byte[]> EnvironmentPositionMarkers { get; } = new();\n"
+        ]
+      ]
+    ],
+    "Common/Geometry/Data/SolidObjectMaterial.cs": [
+      "6402cdd2dca2a470745aa50601d561b45b32c2e347ca5e3ab47b669893c6d059",
+      []
+    ],
+    "Common/Geometry/Data/UndercoverObject.cs": [
+      "537e1c1f7094ee180d94d447aba765a182805fe9282a2e221974ff66c8a76b47",
+      []
+    ],
+    "Common/Geometry/Data/Underground2Object.cs": [
+      "5ddcd1a0921a734a02e997f8cf1408a2def775cab1263f12688ff36f7b02f07d",
+      []
+    ],
+    "Common/Geometry/Data/UndergroundObject.cs": [
+      "de53e93875a1f636d672facf9ecac3ee3cd782cdad3157433c4472f47ded03e1",
+      []
+    ],
+    "Common/Geometry/Data/World09Object.cs": [
+      "bce327c9f304c954ccef63c2cbf408a353b63e756c6d0ddfd114b41c15d6fe32",
+      []
+    ],
+    "Common/Geometry/Data/World15Object.cs": [
+      "23a991995e6989c2a5a40435b4ca8f943b722f2cb3507b3a58dc880b99a0e4aa",
+      []
+    ],
+    "Common/Geometry/MostWantedSolidListReader.cs": [
+      "7ca1d7094dceebb1432cad9ad662c57fde722ef11486246c112b15886bf7fda3",
+      []
+    ],
+    "Common/Geometry/MostWantedSolidReader.cs": [
+      "e7d61126c3db0a15801639e0aae9880c200c53b6894b9609ab2c6a0913571f97",
+      []
+    ],
+    "Common/Geometry/ProStreetSolidListReader.cs": [
+      "f9583d84ae848ebed3bb958e2047c29c272888f63505bfe6a8f491d00d0f3196",
+      []
+    ],
+    "Common/Geometry/ProStreetSolidReader.cs": [
+      "fc9b0f8ba76dddc63102f3e51b3dac723b998e3d99a50c0ea8f193cc40f617e5",
+      []
+    ],
+    "Common/Geometry/SolidListReader.cs": [
+      "dd98607e77cc4634af3c5fcca9cc03c2b4cbec9ce5e30909aacab02b6475a659",
+      []
+    ],
+    "Common/Geometry/SolidReader.cs": [
+      "2006ba62524ef8f9ab824dba77e89e09ccf75d1613f1fffcfd59e29657963756",
+      [
+        [
+          0,
+          1,
+          ""
+        ],
+        [
+          6475,
+          6475,
+          "                    // Some Carbon scenery uses an extra UV channel/padding.\n                    // The shader decoder consumes the common fields; advance\n                    // by the actual buffer stride, not the common field size.\n                    if (vbStream.BaseStream.Position > vbStartPos + (i + 1) * vbStride)\n                        throw new InvalidDataException($\"Vertex decoder exceeds stride: {Solid.Name} stride={vbStride}\");\n                    vbStream.BaseStream.Position = vbStartPos + (i + 1) * vbStride;\n"
+        ],
+        [
+          8838,
+          8883,
+          ""
+        ],
+        [
+          8956,
+          8968,
+          "if "
+        ],
+        [
+          8984,
+          8985,
+          "!"
+        ],
+        [
+          8988,
+          8989,
+          ")"
+        ],
+        [
+          8990,
+          8990,
+          "throw new InvalidDataException("
+        ],
+        [
+          8991,
+          8994,
+          "I"
+        ],
+        [
+          8995,
+          8995,
+          "valid position-mar"
+        ],
+        [
+          8996,
+          8999,
+          ""
+        ],
+        [
+          9000,
+          9000,
+          "r"
+        ],
+        [
+          9001,
+          9010,
+          "extent"
+        ],
+        [
+          9021,
+          9021,
+          " for (uint n = 0; n < chunkSize / 80; ++n) {\n            var data ="
+        ],
+        [
+          9035,
+          9035,
+          "Read"
+        ],
+        [
+          9036,
+          9036,
+          "ytes(80);\n            if (d"
+        ],
+        [
+          9037,
+          9038,
+          "ta.L"
+        ],
+        [
+          9039,
+          9039,
+          "ngth != 80) throw new EndOf"
+        ],
+        [
+          9045,
+          9045,
+          "Exception();\n            Solid"
+        ],
+        [
+          9046,
+          9046,
+          "Environment"
+        ],
+        [
+          9054,
+          9062,
+          "Mar"
+        ],
+        [
+          9063,
+          9066,
+          ""
+        ],
+        [
+          9067,
+          9067,
+          "rs.Add(data)"
+        ],
+        [
+          9069,
+          9069,
+          "        }\n"
+        ],
+        [
+          9571,
+          9571,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Geometry/UndercoverEffectId.cs": [
+      "9e485a7e8b01fa49a87f22365902a79a68f4a9edc8c928e99a928b80cc485764",
+      []
+    ],
+    "Common/Geometry/UndercoverSolidListReader.cs": [
+      "dee2d057e4acb0e6ecdaae8e5dbb5663d1317f4c565fc3c4ad9e21009ff005f0",
+      []
+    ],
+    "Common/Geometry/UndercoverSolidReader.cs": [
+      "a30264c2535f8b7d71ea54049420af2e81e17e2c63e350f591b95049de4210cd",
+      []
+    ],
+    "Common/Geometry/Underground2SolidListReader.cs": [
+      "8bb1fe60ad471fd1a9e54baa806787905e05f23d395117f71b8a4472453794d0",
+      []
+    ],
+    "Common/Geometry/Underground2SolidReader.cs": [
+      "852b6da7da84b8d6e4d5fa83ab775c92dacc0e86c6bcb4043efc608ae812deb6",
+      []
+    ],
+    "Common/Geometry/UndergroundSolidListReader.cs": [
+      "453d32c0e31185cc698edd76a02cbf132c01f6578aae61cbee1817dec7d1845b",
+      []
+    ],
+    "Common/Geometry/UndergroundSolidReader.cs": [
+      "9569c226290e5116e73370645a1121d53b12c1a4739510866cbc686b48144a98",
+      []
+    ],
+    "Common/Geometry/World09SolidListReader.cs": [
+      "b3bd24ac6b4ba2647ca4eb765818e411917066ba848d81fb75899cba68ab1037",
+      []
+    ],
+    "Common/Geometry/World09SolidReader.cs": [
+      "09cc342d637016689ba2f86b544323695a32dcedbfb43ce519dccd6862bf203b",
+      []
+    ],
+    "Common/Geometry/WorldSolidListReader.cs": [
+      "534d42b53ef31f8d1fa530ac79bf00fde961d94a8d5627f95d21830efdddc269",
+      []
+    ],
+    "Common/Geometry/WorldSolidReader.cs": [
+      "7df429bfa86ea307241443f2e2e53d95420cef3753ddec9a879f3482942bc7e0",
+      []
+    ],
+    "Common/Hasher.cs": [
+      "7b0fdb89396482d166ed1b3a878404125946cc783047192896769de05a1d1315",
+      []
+    ],
+    "Common/Lights/Data/LightPack.cs": [
+      "91fbd77baa0807c77c88b7df0994e46f641f4b991adcb4eee812b1b3e3e0553a",
+      []
+    ],
+    "Common/Lights/LightPackReader.cs": [
+      "c752ba038aca61c339808654b541df893a220b2dd660d91d96668190fed6e7f7",
+      []
+    ],
+    "Common/Lights/Structures/LightData.cs": [
+      "9afc7e4b7806cb01122b623ffe354754ad93a00b09a475ddb2f6c019099e359e",
+      []
+    ],
+    "Common/Lights/Structures/LightPackHeader.cs": [
+      "8312b80ff05cf3b6b3e19a5d963b6af3f9acc7aa61961dbbd56fe16d6749c7e9",
+      []
+    ],
+    "Common/Scenery/CarbonScenery.cs": [
+      "1820dc9a28b4e948accafcbd9ea2310f640c4396e0aa6be03ee2968b1ec84df7",
+      [
+        [
+          4168,
+          4168,
+          "                long sourceAt=br.BaseStream.Position;\n                byte[] sourceRaw=br.ReadBytes(0x48);br.BaseStream.Position=sourceAt;\n                if(sourceRaw.Length!=0x48)throw new EndOfStreamException();\n"
+        ],
+        [
+          4404,
+          4404,
+          ","
+        ],
+        [
+          4405,
+          4405,
+          "                    LodKeys = new[]{info.SolidMeshKey1,info.SolidMeshKey2,info.SolidMeshKey3,info.SolidMeshKey4},\n                    SourceFlags=info.Flags, HierarchyNameHash=info.HierarchyNameHash, SourceRadius=info.Radius,SourceRaw=sourceRaw\n"
+        ],
+        [
+          5001,
+          5001,
+          "                long sourceAt=br.BaseStream.Position;\n                byte[] sourceRaw=br.ReadBytes(0x60);br.BaseStream.Position=sourceAt;\n                if(sourceRaw.Length!=0x60)throw new EndOfStreamException();\n"
+        ],
+        [
+          5175,
+          5175,
+          "                instance.Flags = internalInstance.InstanceFlags;\n                instance.SourceBoundsMin = internalInstance.BBoxMin;\n                instance.SourceBoundsMax = internalInstance.BBoxMax;\n                instance.SceneryGuid=internalInstance.SceneryGuid;\n                instance.PrecullerInfoIndex=internalInstance.PrecullerInfoIndex;\n                instance.LightingContextNumber=internalInstance.LightingContextNumber;\n                instance.SourceRaw=sourceRaw;\n"
+        ],
+        [
+          5570,
+          5570,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Scenery/Data/ScenerySection.cs": [
+      "e779085cb55a4b82ab0c58157862f81c77b933842c75d4aade74dda0f55e884a",
+      [
+        [
+          258,
+          258,
+          "        public uint[] LodKeys { get; set; } = System.Array.Empty<uint>();\n        public uint SourceFlags { get; set; }\n        public uint HierarchyNameHash { get; set; }\n        public float SourceRadius { get; set; }\n        public byte[] SourceRaw { get; set; } = System.Array.Empty<byte>();\n"
+        ],
+        [
+          304,
+          304,
+          "        public Vector3 SourceBoundsMin { get; set; }\n        public Vector3 SourceBoundsMax { get; set; }\n        public uint Flags { get; set; }\n"
+        ],
+        [
+          396,
+          396,
+          "        public uint SceneryGuid { get; set; }\n        public short PrecullerInfoIndex { get; set; }\n        public short LightingContextNumber { get; set; }\n        public byte[] SourceRaw { get; set; } = System.Array.Empty<byte>();\n"
+        ],
+        [
+          687,
+          687,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Scenery/MostWantedScenery.cs": [
+      "35835abd80873dbb02748c411aa69acef1c28c7a736e25f2ddcdf09115bd4d2b",
+      [
+        [
+          5070,
+          5070,
+          "                instance.Flags = internalInstance.ExcludeFlags;\n"
+        ],
+        [
+          5319,
+          5319,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Scenery/ProStreetScenery.cs": [
+      "8ce1c2f5edc34175a8f3cda0894dfd22e254d809e799463f265f7192919e48e7",
+      []
+    ],
+    "Common/Scenery/SceneryManager.cs": [
+      "64493597ed1fdbf09abe778c48831c86bf9aaf4b9536ec4daab55b4fc6572c8a",
+      []
+    ],
+    "Common/Scenery/Structures/PackedRotationMatrix.cs": [
+      "d8bdc3af5e6e0fbebce07ce8b778368a54304e09a9e0014a7d11e18f086dd5f8",
+      []
+    ],
+    "Common/Scenery/Structures/RotationMatrix.cs": [
+      "b4f9ead0e7aa320e8eeed0fa1d2b407df20dd1b7a3c3f598b22b67fbd77f2e5b",
+      []
+    ],
+    "Common/Scenery/UndercoverScenery.cs": [
+      "6d85edf22282b07f3f84fa4e8d745b9437763a0c0996fce14ff0f0a59f45031f",
+      []
+    ],
+    "Common/Scenery/Underground2Scenery.cs": [
+      "76b0129b65639a1f63eeb7edca3de3dc1493c649c3b56f73a627ad2fd67908d7",
+      []
+    ],
+    "Common/Scenery/UndergroundScenery.cs": [
+      "105d2b5b5e0f66a1b6cad169a2c9794fa5248efbfdaf891bd71b147535370d20",
+      []
+    ],
+    "Common/Scenery/WorldScenery.cs": [
+      "9d08a1d20a1808eba80aef22ec2d3a8bde28f85ef1557fd5ebc9926afe1f97f2",
+      []
+    ],
+    "Common/Textures/Data/DDSHeader.cs": [
+      "d9c94daa1f2e190a23ed7412ce88a3b285427d890e049565749b49429b090b90",
+      []
+    ],
+    "Common/Textures/Data/TexturePack.cs": [
+      "cf894286d4ebf9261fea2c644644e97e5fd9040bbd90b9cbd34d1af460931cda",
+      [
+        [
+          1202,
+          1202,
+          "        public byte AlphaUsageType { get; set; }\n        public byte AlphaBlendType { get; set; }\n        public byte RenderFlags { get; set; }\n        public byte TilableUV { get; set; }\n        public byte ScrollType { get; set; }\n        public short ScrollTimeStep { get; set; }\n        public short ScrollSpeedS { get; set; }\n        public short ScrollSpeedT { get; set; }\n"
+        ],
+        [
+          1604,
+          1604,
+          "        // Private v2 reader provenance: complete source texture-info record.\n        public byte[] SourceHeader { get; set; } = Array.Empty<byte>();\n        public short OffsetS { get; set; }\n        public short OffsetT { get; set; }\n        public short ScaleS { get; set; }\n        public short ScaleT { get; set; }\n"
+        ],
+        [
+          2144,
+          2144,
+          "                if (Palette == null || Palette.Length != 1024)\n                    throw new InvalidDataException($\"P8 texture requires 256-entry source palette: {Name} {TexHash:x8}\");\n"
+        ]
+      ]
+    ],
+    "Common/Textures/TpkManager.cs": [
+      "061cee46a6e8685e70d8b1c6f8873d62a1b458fda23ace2041aaba88a88d24e4",
+      []
+    ],
+    "Common/Textures/Version1Tpk.cs": [
+      "ee0328f2bc3f246dcbfeb98ac1a822584eafd83b652ea693f9a6299a2d8d1087",
+      []
+    ],
+    "Common/Textures/Version2Tpk.cs": [
+      "2b651d4dcfbdfed04c5ad083d145f5e4bb143b0d6883e50b6acaf5c08e897d67",
+      [
+        [
+          4329,
+          4329,
+          "                                    if (br.BaseStream.Position < basePos || br.BaseStream.Position + t.Data.Length > chunkEndPos)\n                                        throw new InvalidDataException(\"Source v5 texture image bounds\");\n"
+        ],
+        [
+          4368,
+          4368,
+          "BaseStream."
+        ],
+        [
+          4372,
+          4372,
+          "Exactly"
+        ],
+        [
+          4379,
+          4397,
+          ""
+        ],
+        [
+          4589,
+          4589,
+          "                                        if (br.BaseStream.Position < basePos || br.BaseStream.Position + t.PaletteSize > chunkEndPos)\n                                            throw new InvalidDataException(\"Source v5 palette bounds\");\n"
+        ],
+        [
+          4709,
+          4709,
+          "BaseStream."
+        ],
+        [
+          4713,
+          4713,
+          "Exactly"
+        ],
+        [
+          4723,
+          4744,
+          ""
+        ],
+        [
+          5657,
+          5657,
+          "            long sourceAt = br.BaseStream.Position;\n"
+        ],
+        [
+          5729,
+          5729,
+          "            long sourceEnd = br.BaseStream.Position;\n            br.BaseStream.Position = sourceAt;\n            var sourceHeader = br.ReadBytes(checked((int)(sourceEnd - sourceAt)));\n            if (sourceHeader.Length != sourceEnd - sourceAt) throw new EndOfStreamException();\n            if (textureInfo.ImageSize > 256 * 1024 * 1024 || textureInfo.PaletteSize > 65536)\n                throw new InvalidDataException(\"Source v5 texture allocation bound\");\n"
+        ],
+        [
+          6301,
+          6301,
+          "                AlphaUsageType = textureInfo.AlphaUsageType,\n                AlphaBlendType = textureInfo.AlphaBlendType,\n                RenderFlags = textureInfo.Flags,\n                TilableUV = textureInfo.TilableUV,\n                ScrollType = textureInfo.ScrollType,\n                ScrollTimeStep = textureInfo.ScrollTimeStep,\n                ScrollSpeedS = textureInfo.ScrollSpeedS,\n                ScrollSpeedT = textureInfo.ScrollSpeedT,\n                OffsetS = textureInfo.OffsetS,\n                OffsetT = textureInfo.OffsetT,\n                ScaleS = textureInfo.ScaleS,\n                ScaleT = textureInfo.ScaleT,\n                SourceHeader = sourceHeader,\n"
+        ],
+        [
+          9825,
+          9825,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Textures/Version3Tpk.cs": [
+      "20f169501f0e0a8af1f15da7abbf80f88b36cd196281f480e2ea75797666361f",
+      [
+        [
+          4238,
+          4238,
+          "                                        if (texture.PaletteSize > 0)\n                                        {\n                                            long paletteAt = (long)texture.PaletteOffset - texture.DataOffset;\n                                            if (paletteAt < 0 || paletteAt + texture.PaletteSize > ms.Length)\n                                                throw new InvalidDataException(\"Compressed source palette bounds\");\n                                            dcr.BaseStream.Position = paletteAt;\n                                            texture.Palette = dcr.ReadBytes(checked((int)texture.PaletteSize));\n                                            if (texture.Palette.Length != texture.PaletteSize) throw new EndOfStreamException();\n                                        }\n"
+        ],
+        [
+          5174,
+          5174,
+          "                                    if (br.BaseStream.Position < basePos || br.BaseStream.Position + t.Data.Length > chunkEndPos)\n                                        throw new InvalidDataException(\"Source texture image bounds\");\n"
+        ],
+        [
+          5213,
+          5213,
+          "BaseStream."
+        ],
+        [
+          5217,
+          5217,
+          "Exactly"
+        ],
+        [
+          5224,
+          5225,
+          ");\n                                    if (t.PaletteSize >"
+        ],
+        [
+          5227,
+          5228,
+          ")\n                                    {\n                                        br.BaseStream.Position = basePos +"
+        ],
+        [
+          5231,
+          5231,
+          "PaletteOffset;\n                                        if (br.BaseStream.Position < basePos || br.BaseStream.Position + t.PaletteSize > chunkEndPos)\n                                            throw new Invalid"
+        ],
+        [
+          5235,
+          5235,
+          "Exception(\"Source texture palette bounds\");\n                                        t.Palette = br.ReadBytes(checked((int)t.PaletteSize));\n                                        if (t.Palette"
+        ],
+        [
+          5242,
+          5242,
+          " != t.PaletteSize) throw new EndOfStreamException("
+        ],
+        [
+          5245,
+          5245,
+          "                                    }\n"
+        ],
+        [
+          6028,
+          6028,
+          "            long sourceAt = br.BaseStream.Position;\n"
+        ],
+        [
+          6216,
+          6216,
+          "            long sourceEnd = br.BaseStream.Position;\n            br.BaseStream.Position = sourceAt;\n            var sourceHeader = br.ReadBytes(checked((int)(sourceEnd - sourceAt)));\n            if (sourceHeader.Length != sourceEnd - sourceAt) throw new EndOfStreamException();\n            if (texture.ImageSize > 256 * 1024 * 1024 || texture.PaletteSize > 65536)\n                throw new InvalidDataException(\"Source texture allocation bound\");\n"
+        ],
+        [
+          6541,
+          6541,
+          "                PaletteSize = texture.PaletteSize,\n                PaletteOffset = texture.PalettePlacement,\n"
+        ],
+        [
+          6686,
+          6686,
+          "                AlphaUsageType = texture.AlphaUsageType,\n                AlphaBlendType = texture.AlphaBlendType,\n                RenderFlags = texture.Flags,\n                TilableUV = texture.TilableUV,\n                CompressionType = texture.ImageCompressionType,\n                ScrollType = texture.ScrollType,\n                ScrollTimeStep = texture.ScrollTimeStep,\n                ScrollSpeedS = texture.ScrollSpeedS,\n                ScrollSpeedT = texture.ScrollSpeedT,\n                OffsetS = texture.OffsetS,\n                OffsetT = texture.OffsetT,\n                ScaleS = texture.ScaleS,\n                ScaleT = texture.ScaleT,\n                SourceHeader = sourceHeader,\n"
+        ],
+        [
+          8039,
+          8041,
+          "// Car"
+        ],
+        [
+          8042,
+          8042,
+          "on v8 stores the seven signed UV fie"
+        ],
+        [
+          8043,
+          8045,
+          "ds at"
+        ],
+        [
+          8051,
+          8066,
+          "60."
+        ],
+        [
+          8079,
+          8079,
+          "// The two s"
+        ],
+        [
+          8080,
+          8086,
+          "a"
+        ],
+        [
+          8088,
+          8094,
+          ""
+        ],
+        [
+          8099,
+          8099,
+          "s"
+        ],
+        [
+          8100,
+          8101,
+          "belong to the tr"
+        ],
+        [
+          8102,
+          8102,
+          "iling reserve"
+        ],
+        [
+          8103,
+          8105,
+          " area."
+        ],
+        [
+          8422,
+          8423,
+          "4"
+        ],
+        [
+          8798,
+          8798,
+          "\n"
+        ]
+      ]
+    ],
+    "Common/Textures/Version4Tpk.cs": [
+      "577ee1282bfc33ec3db76584866b25cfe22840986e682e43f7b2d585e3b2913a",
+      []
+    ],
+    "Common/Textures/Version5Tpk.cs": [
+      "4fea50e6114b5b40ff4f8d9ccf67382b8bd9c197ddee6c120904d182b2e6a646",
+      []
+    ],
+    "Common/Textures/World10Tpk.cs": [
+      "f5c9e2c6793d9c5a1dcd6787e4c7b4761f07da02081b8e6883d4ca9f46f8bd30",
+      []
+    ],
+    "CompLib/Algorithms/HuffAlgorithm.cs": [
+      "70ffb3760258e83cf7e16947326bc7ce64663fbb60355732e9796ef7bd40258e",
+      []
+    ],
+    "CompLib/Algorithms/JdlzAlgorithm.cs": [
+      "86514d9ee35165b9ebb3be006bf946c0364a663caaf3ef72df5f81a45bf07d26",
+      []
+    ],
+    "CompLib/Algorithms/RawAlgorithm.cs": [
+      "f8ec0a97a8410bd71a12fc2b400849fe9bc2ef4d50bd748d016368d676d0cd51",
+      []
+    ],
+    "CompLib/Algorithms/RefPackAlgorithm.cs": [
+      "3bcaac3be6b9667e0d1789ffb1b0b7a8bff534fbe0bfd7cab13982941baadcef",
+      []
+    ],
+    "CompLib/CompressedDataHeader.cs": [
+      "8bbba6e3fbac8c72c28f11085439c69b1e139e8ecbaf6b006966be4cc33ad5a5",
+      []
+    ],
+    "CompLib/CompressionException.cs": [
+      "3536c96655cfb5a25a91831ef11d99be476d1ca4dbc8df79ca5b2f71c07f4c30",
+      []
+    ],
+    "CompLib/Decompressor.cs": [
+      "816da4e666ba77885be2004cff439499860cd38850f8457c4b49dc6c8b9aba5a",
+      []
+    ],
+    "CompLib/ICompressionAlgorithm.cs": [
+      "71b3948e67e904f1475bae10a4999d71ec48bb8626cc9db2e3ea180f6cdf1a82",
+      []
+    ]
+  }
+}
