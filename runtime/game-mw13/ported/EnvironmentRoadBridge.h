@@ -73,9 +73,14 @@ static void BindEnvironmentRoad(){
  // WorldReflectShader uses its own live weather uniforms and the global
  // SunSet road-detail texture. Flat geometric normals lose that daylight
  // surface detail even when the diffuse road texture is otherwise correct.
- EnvironmentVector(effect,"cvDiffuseColor",envRoadDiffuse);EnvironmentVector(effect,"cvAmbientColor",envRoadAmbient);
+ const bool roadDiffuseRead=EnvironmentVector(effect,"cvDiffuseColor",envRoadDiffuse);
+ const bool roadAmbientRead=EnvironmentVector(effect,"cvAmbientColor",envRoadAmbient);
+ if(!roadDiffuseRead||!roadAmbientRead){
+  memcpy(envRoadDiffuse,envDiffuse,sizeof envRoadDiffuse);
+  memcpy(envRoadAmbient,envAmbient,sizeof envRoadAmbient);
+ }
 #ifdef W2C_PUBLIC_BUILD
- BalancePublicDaylight(envRoadDiffuse,envRoadAmbient,1.40f);
+ else w2c_public_light::BalanceDaylight(envRoadDiffuse,envRoadAmbient,1.40f,PublicShadeWeight());
 #endif
  envRoadDetailSettings[0]=EnvironmentRoadTexture(effect,"MISCMAP3_TEXTURE",5,false)?1.f:0.f;
  device->SetSamplerState(5,D3DSAMP_MIPFILTER,D3DTEXF_LINEAR);device->SetSamplerState(5,D3DSAMP_MIPMAPLODBIAS,0);device->SetSamplerState(5,D3DSAMP_MAXMIPLEVEL,0);
@@ -88,7 +93,7 @@ static void BindEnvironmentRoad(){
  envRoadSettings[2]=EnvironmentRoadTexture(effect,"MISCMAP1_TEXTURE",3,false)?1.f:0.f;
  envRoadSettings[3]=EnvironmentRoadTexture(effect,"MISCMAP2_TEXTURE",4,false)?1.f:0.f;
  device->SetPixelShaderConstantF(85,envRain,1);device->SetPixelShaderConstantF(87,envSpecular,1);
- static DWORD reported=0;DWORD now=GetTickCount();if(now-reported>10000){reported=now;
+ static DWORD reported=0;DWORD now=worldLogEnabled?GetTickCount():0;if(now-reported>10000&&worldLogEnabled){reported=now;
   auto nativeRain=*reinterpret_cast<BYTE**>(0x9196B8);
   Log("ENVIRONMENT_ROAD_DETAIL native_texture=%u world_diffuse=%.4f,%.4f,%.4f road_diffuse=%.4f,%.4f,%.4f world_ambient=%.4f,%.4f,%.4f road_ambient=%.4f,%.4f,%.4f source=SunSet_WorldReflectShader",
    unsigned(envRoadDetailSettings[0]),envDiffuse[0],envDiffuse[1],envDiffuse[2],envRoadDiffuse[0],envRoadDiffuse[1],envRoadDiffuse[2],envAmbient[0],envAmbient[1],envAmbient[2],envRoadAmbient[0],envRoadAmbient[1],envRoadAmbient[2]);

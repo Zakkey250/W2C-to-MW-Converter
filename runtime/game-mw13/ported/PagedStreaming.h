@@ -21,6 +21,10 @@ static bool V2ReadPage(unsigned id,w2v2::Epoch epoch){
   copy(result->draws,w2v2disk::r64(packed,64),summary.draws);copy(result->spans,w2v2disk::r64(packed,72),w2v2disk::r32(packed,40));copy(result->shadowSpans,w2v2disk::r64(packed,80),w2v2disk::r32(packed,44));copy(result->order[0],w2v2disk::r64(packed,88),w2v2disk::r32(packed,48));copy(result->order[1],w2v2disk::r64(packed,96),w2v2disk::r32(packed,52));
   result->textureKeys=V2PageTextureKeys(result->draws);
   for(unsigned i=0;i<summary.clusters;++i){std::size_t at=256+std::size_t(i)*128;result->blocks.push_back({w2v2disk::r32(packed,at+24),w2v2disk::r32(packed,at+28),w2v2disk::r32(packed,at+32),w2v2disk::decodePageCluster(packed,i)});}
+#ifdef W2C_PUBLIC_BUILD
+  ApplyClosureDraws(*result);
+  for(auto& draw:result->draws)ApplyPublicDayCeilingLights(draw.minimum,draw.maximum,draw.lights.day);
+#endif
   std::lock_guard lock(ioMutex);if(epoch!=V2Epoch()){++v2StaleDrops;return true;}v2PageReady.push_back(std::move(result));return true;
  }catch(const std::exception& error){++v2Failures;Log("V2_READ_REFUSED section=%u reason=%s",id,error.what());return true;}
 }

@@ -5,6 +5,9 @@ static void LoadSourceEnvironment(){
  load(51,"environment/lights",0x324c4d57,envLights,100000);load(51,"environment/flares",0x32464d57,envFlares,100000);
  for(unsigned i=0;i<envLights.size();++i){const auto& l=envLights[i];need(std::isfinite(l.position.x)&&std::isfinite(l.position.y)&&std::isfinite(l.position.z)&&std::isfinite(l.range)&&l.range>0&&l.range<10000&&std::isfinite(l.intensity)&&l.intensity>=0,"source light bounds");envLightGrid[{int(std::floor(l.position.x/64)),int(std::floor(l.position.y/64))}].push_back(i);}
  for(unsigned i=0;i<envFlares.size();++i){const auto& l=envFlares[i];need(l.type<=20&&std::isfinite(l.position.x)&&std::isfinite(l.position.y)&&std::isfinite(l.position.z),"source flare bounds");envFlareGrid[{int(std::floor(l.position.x/64)),int(std::floor(l.position.y/64))}].push_back(i);}
+#ifdef W2C_PUBLIC_BUILD
+ PreparePublicCeilingLights();
+#endif
  Log("SOURCE_ENVIRONMENT lights=%u flares=%u pack_only=1",unsigned(envLights.size()),unsigned(envFlares.size()));
 }
 static bool LoadSourceVisibility(){try{

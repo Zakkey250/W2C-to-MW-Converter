@@ -1,4 +1,4 @@
-"""Package the RC4 portable directory after building it; no game inputs are used."""
+"""Package the portable converter directory after building it."""
 import argparse
 import ast
 import hashlib

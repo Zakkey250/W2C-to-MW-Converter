@@ -1,4 +1,4 @@
-# Build the RC4 Preview converter on Windows
+# Build Converter RC5 on Windows
 
 The source here covers the converter UI and conversion pipeline, rollback tool,
 the world ASI and repacker, the vault helper, and the adapter for the W2C source
@@ -14,7 +14,7 @@ save files, or prebuilt source importer.
 - For the vault helper's build references, use [OGVI 1.4](https://nfsmods.xyz/mod/5290) extracted over [Attribulator 2.0](https://github.com/NFSTools/Attribulator/releases/tag/v2.0.0). The linked assemblies remain in your tool folder and are not in the converter ZIP.
 
 ```powershell
-git clone --branch v2.0.0-rc4 https://github.com/Zakkey250/W2C-to-MW-Converter.git
+git clone --branch v2.0.0-rc5 https://github.com/Zakkey250/W2C-to-MW-Converter.git
 cd W2C-to-MW-Converter
 git clone https://github.com/berkayylmao/NFSPluginSDK.git third_party/NFSPluginSDK
 git -C third_party/NFSPluginSDK checkout d238bdffc648498840d17133edb256fa0310d355
@@ -55,3 +55,17 @@ the build, the setup script also accepts a directory with the two pinned ZIP
 files (`--archives`) and an explicit `dotnet.exe` path (`--dotnet`).
 Neither the upstream NFS-ModTools source nor the locally built importer is
 part of the release asset.
+
+## Build the RC4 to RC5 patcher
+
+Install PyInstaller 6.22.3 and PyYAML 6.0.3 in a Python 3.12 environment and pass the verified
+RC5 runtime from `_internal/bin/W2CMWPublic.asi` in the Converter RC5 ZIP.
+The script checks that the payload matches the RC5 fingerprint accepted by the
+patcher. The compiled EXE and its payload are placed together under
+`build/rc4-to-rc5-patch/dist`.
+
+```powershell
+py -3.12 -m venv build/patch-venv
+.\build\patch-venv\Scripts\python.exe -m pip install pyinstaller==6.22.3 PyYAML==6.0.3
+.\tools\Build-RC4ToRC5Patch.ps1 -Python .\build\patch-venv\Scripts\python.exe -RuntimeAsi 'C:/rc5/_internal/bin/W2CMWPublic.asi'
+```

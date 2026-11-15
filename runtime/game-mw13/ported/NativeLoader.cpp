@@ -53,6 +53,9 @@ struct EnvironmentVertex {Vec3 position;Vec3 normal;DWORD color;float u,v;float 
 struct EnvironmentMeshLights {std::array<unsigned,8> day{},night{};};
 struct ShadowIndexSpan {unsigned owner,firstIndex,indexCount;};
 #include "PagedTypes.h"
+#ifdef W2C_PUBLIC_BUILD
+#include "WorldClosureAddon.h"
+#endif
 struct CpuSection {w2v2::Lease stage;Header header;std::vector<Mesh> meshes;std::vector<Vertex> vertices;std::vector<uint32_t> indices;std::vector<NormalColor> normals;std::vector<EnvironmentVertex> gpuVertices;std::vector<EnvironmentMeshLights> lights;std::vector<unsigned> triangleOverlap,meshOverlap,shadowIndices;std::vector<ShadowIndexSpan> shadowSpans;std::array<std::vector<unsigned>,2> drawMeshes;};
 struct Section {std::shared_ptr<PageGpu> page;w2v2::Lease gpuLease;Header header{};IDirect3DVertexBuffer9* vb=nullptr;IDirect3DIndexBuffer9* ib=nullptr;std::vector<Mesh> meshes;std::vector<EnvironmentMeshLights> lights;std::vector<unsigned> meshOverlap;std::vector<ShadowIndexSpan> shadowSpans;std::array<std::vector<unsigned>,2> drawMeshes;IDirect3DIndexBuffer9* shadowIB=nullptr;unsigned shadowIndices=0;bool queued=false;DWORD used=0;uint64_t bytes=0;};
 struct Ready {unsigned id;std::unique_ptr<CpuSection> data;double ms;w2v2::Epoch epoch;};
@@ -121,6 +124,9 @@ static void RemovePropGhosts(CpuSection& data);
 static bool ReadEnvironmentNormals(unsigned id,CpuSection& data,std::vector<NormalColor>& normals);
 static bool environmentInstalled=false;
 static void BuildEnvironmentTiles(CpuSection& data);
+#ifdef W2C_PUBLIC_BUILD
+static void ApplyPublicDayCeilingLights(Vec3 minimum,Vec3 maximum,std::array<unsigned,8>& day);
+#endif
 static void InstallSunSetCompatibility();
 static void LoadEnvironmentDynamics();
 #ifdef W2C_PUBLIC_BUILD
@@ -428,7 +434,11 @@ static void RenderBody(void* targetView,unsigned drawFlags){
   if(initialPasses++<8||(elapsed>(renderWorkProfiling?3:33)&&tick-reportedSlow>1000)){reportedSlow=tick;Log("MW_NEOAI_RENDER_PERF depth=%u total_ms=%.3f select_ms=%.3f pump_ms=%.3f props_ms=%.3f draw_ms=%.3f meshes=%u",unsigned(envDepthPass),elapsed,selectMs,pumpMs,propsMs,elapsed-selectMs-pumpMs-propsMs,meshCount);}
  }
  if(mainView&&worldLogEnabled){if(envDepthPass){depthSubmitTotal+=Clock()-passStart;++depthSubmitCount;}else{mainSubmitTotal+=Clock()-passStart;++mainSubmitCount;}}
- if(!mainView||envDepthPass)return;TrimTextures();if(!worldLogEnabled)return;DWORD now=GetTickCount();if(now-lastReport>2000){lastReport=now;Log("ENVIRONMENT_BATCH depth=%u meshes=%u draws=%u",unsigned(envDepthPass),meshCount,drawCalls);Log("WINDOW_LAYERS night=%.1f drawn=%u skipped_day=%u masked_material_binds=%u",envNight,nightLayersDrawn,nightLayersSkipped,envEmissiveMasks);Log("OVERLAP_FRAME suppressed_batches=%u",overlapSkipped);ReportNativePassCoherence();Log("ENVIRONMENT_PERF main_submit_ms=%.3f depth_submit_ms=%.3f color_frames=%u depth_frames=%u",mainSubmitCount?mainSubmitTotal/mainSubmitCount:0,depthSubmitCount?depthSubmitTotal/depthSubmitCount:0,mainSubmitCount,depthSubmitCount);mainSubmitTotal=depthSubmitTotal=0;mainSubmitCount=depthSubmitCount=0;size_t queued,completed;{std::lock_guard lock(ioMutex);queued=pending.size();completed=ready.size();}Log("STREAM frame=%u sections=%u meshes=%u resident_mb=%.2f textures=%u texture_mb=%.2f queued=%u ready=%u read_mean_ms=%.3f upload_mean_ms=%.3f camera=%.1f,%.1f,%.1f zone=%u",frameCounter,drawn/2,meshCount,resident/1048576.,unsigned(textures.size()),textureResident/1048576.,unsigned(queued),unsigned(completed),readCount?totalReadMs/readCount:0,uploadCount?totalUploadMs/uploadCount:0,cameraPosition.x,cameraPosition.y,cameraPosition.z,zoneIndex);if(environmentInstalled)Log("ENVIRONMENT_FRAME sunset=%u time=%.5f night=%.1f ambient=%.3f,%.3f,%.3f diffuse=%.3f,%.3f,%.3f animated=%u lit=%u flares=%u motions=%u vehicle_lights=%u",environment,envTOD,envNight,envAmbient[0],envAmbient[1],envAmbient[2],envDiffuse[0],envDiffuse[1],envDiffuse[2],envAnimationDraws,envLitDraws,envFlareDraws,envMotionDraws,envVehicleLights);}
+ if(!mainView||envDepthPass)return;TrimTextures();if(!worldLogEnabled)return;DWORD now=GetTickCount();if(now-lastReport>2000){lastReport=now;Log("ENVIRONMENT_BATCH depth=%u meshes=%u draws=%u",unsigned(envDepthPass),meshCount,drawCalls);Log("WINDOW_LAYERS night=%.1f drawn=%u skipped_day=%u masked_material_binds=%u",envNight,nightLayersDrawn,nightLayersSkipped,envEmissiveMasks);Log("OVERLAP_FRAME suppressed_batches=%u",overlapSkipped);ReportNativePassCoherence();Log("ENVIRONMENT_PERF main_submit_ms=%.3f depth_submit_ms=%.3f color_frames=%u depth_frames=%u",mainSubmitCount?mainSubmitTotal/mainSubmitCount:0,depthSubmitCount?depthSubmitTotal/depthSubmitCount:0,mainSubmitCount,depthSubmitCount);mainSubmitTotal=depthSubmitTotal=0;mainSubmitCount=depthSubmitCount=0;size_t queued,completed;{std::lock_guard lock(ioMutex);queued=pending.size();completed=ready.size();}Log("STREAM frame=%u sections=%u meshes=%u resident_mb=%.2f textures=%u texture_mb=%.2f queued=%u ready=%u read_mean_ms=%.3f upload_mean_ms=%.3f camera=%.1f,%.1f,%.1f zone=%u",frameCounter,drawn/2,meshCount,resident/1048576.,unsigned(textures.size()),textureResident/1048576.,unsigned(queued),unsigned(completed),readCount?totalReadMs/readCount:0,uploadCount?totalUploadMs/uploadCount:0,cameraPosition.x,cameraPosition.y,cameraPosition.z,zoneIndex);if(environmentInstalled)Log("ENVIRONMENT_FRAME sunset=%u time=%.5f night=%.1f ambient=%.3f,%.3f,%.3f diffuse=%.3f,%.3f,%.3f animated=%u lit=%u flares=%u motions=%u vehicle_lights=%u",environment,envTOD,envNight,envAmbient[0],envAmbient[1],envAmbient[2],envDiffuse[0],envDiffuse[1],envDiffuse[2],envAnimationDraws,envLitDraws,envFlareDraws,envMotionDraws,envVehicleLights);
+#ifdef W2C_PUBLIC_BUILD
+ if(environment)Log("PUBLIC_TUNNEL_CEILING_FRAME day=%u draw_light_slots=%u",unsigned(!envNight),publicDayCeilingDraws);
+#endif
+ }
 }
 // Native resource updates and custom draws are covered by one restore, including
 // exception exits. Keep shader constants, samplers and the native car pipeline.

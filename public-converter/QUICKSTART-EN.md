@@ -1,6 +1,8 @@
 # W2C to MW Converter 2.0.0
 
-**RC4 Preview:** Extract the ZIP and open `W2C-to-MW-Converter.exe`. At the first conversion, approve the on-screen importer setup. This uses the internet to fetch and verify the pinned dependencies, then builds the importer locally. Python and Visual Studio are not required.
+**Converter RC5.** Extract the ZIP and open `W2C-to-MW-Converter.exe`. At the first conversion, approve the on-screen importer setup. This uses the internet to fetch and verify the pinned dependencies, then builds the importer locally. Python and Visual Studio are not required.
+
+An existing public RC4 installation can use the separate [RC4 to RC5 Patch](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch). If it fails, use this converter to rebuild from the original W2C files.
 
 1. Extract [W2C 2.0.0](https://nfsmods.xyz/mod/3041). Leave the original files in place.
 2. Prepare a separate Most Wanted game folder with either the NFSPatcher EN-US 1.3 LAA executable or the verified `speed.exe` bundled with Redux 3.04, a supported [Win32 Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases) and Win32 D3DX9. Close the game before installing.

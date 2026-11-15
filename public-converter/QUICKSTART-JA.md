@@ -1,6 +1,8 @@
 # W2C to MW Converter 2.0.0 — 初回利用ガイド
 
-**RC4 Preview:** ZIPをすべて展開して `W2C-to-MW-Converter.exe` を起動してください。初めて変換するときは原本読み込み部品のセットアップを確認してください。必要な部品をネットから取得・照合し、PC内でビルドします。PythonやVisual Studioは不要です。
+**コンバーターRC5。** ZIPをすべて展開して `W2C-to-MW-Converter.exe` を起動してください。初めて変換するときは原本読み込み部品のセットアップを確認してください。必要な部品をネットから取得・照合し、PC内でビルドします。PythonやVisual Studioは不要です。
+
+公開版RC4を導入済みの場合は、別配布の [RC4→RC5パッチャー](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch) で更新できます。適用に失敗する場合は、このコンバーターでW2Cの原本から再構築してください。
 
 このWindows x64版は公開前の確認用です。ZIPをすべて展開し、`W2C-to-MW-Converter.exe` を開いてください。隣の `_internal` フォルダーもそのまま置きます。
 

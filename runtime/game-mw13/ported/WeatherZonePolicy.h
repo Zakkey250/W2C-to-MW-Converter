@@ -8,16 +8,19 @@ static bool W2CWeatherGridBounds(const W2CWeatherZone& zone,int& loX,int& loY,in
  loX=int(std::floor(x0/64));loY=int(std::floor(y0/64));hiX=int(std::floor(x1/64));hiY=int(std::floor(y1/64));
  return uint64_t(hiX-loX+1)*uint64_t(hiY-loY+1)<=4096;
 }
-static W2CWeatherCover W2CSourceWeatherCover(const std::vector<W2CWeatherZone>& zones,Vec3 point){
- W2CWeatherCover cover;float x=point.z,y=-point.x;
- for(const auto& zone:zones){
-  if(zone.polygon.size()<3||point.y>zone.elevation)continue;
+static bool W2CPointInWeatherZone(const W2CWeatherZone& zone,float x,float y){
+  if(zone.polygon.size()<3)return false;
   bool inside=false;
   for(unsigned i=0,j=unsigned(zone.polygon.size()-1);i<zone.polygon.size();j=i++){
    auto a=zone.polygon[j],b=zone.polygon[i];
    if((a[1]>y)!=(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])inside=!inside;
   }
-  if(inside){cover.roof=true;cover.tunnel|=zone.type==3;cover.roofHeight=std::max(cover.roofHeight,zone.elevation);}
+  return inside;
+}
+static W2CWeatherCover W2CSourceWeatherCover(const std::vector<W2CWeatherZone>& zones,Vec3 point){
+ W2CWeatherCover cover;float x=point.z,y=-point.x;
+ for(const auto& zone:zones){
+  if(point.y<=zone.elevation&&W2CPointInWeatherZone(zone,x,y)){cover.roof=true;cover.tunnel|=zone.type==3;cover.roofHeight=std::max(cover.roofHeight,zone.elevation);}
  }
  return cover;
 }

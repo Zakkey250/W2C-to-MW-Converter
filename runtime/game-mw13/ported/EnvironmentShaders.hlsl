@@ -72,8 +72,8 @@ float visibility=WorldVisibility(i.world,saturate(dot(normalize(i.n),Sun.xyz)));
 if(RoadSettings.x>0)albedo*=lerp(saturate(dot(n,normalize(i.n))),1,visibility);
 float3 illumination=lerp(.5,i.c.rgb*2,diffuse.w)*ambient.rgb+saturate(dot(n,Sun.xyz))*diffuse.rgb*exposure*visibility;
 float3 spotIllumination=0;
-[loop]for(int k=0;k<LocalSettings.x;k++){float3 d=LP[k].xyz-i.world;float dist=length(d);float atten=saturate(1-dist*LP[k].w);[branch]if(atten<=0)continue;float3 toward=d/max(dist,.0001);float cone=smoothstep(LD[k].w,LC[k].w,dot(-toward,LD[k].xyz));spotIllumination+=LC[k].rgb*atten*atten*saturate(dot(n,toward))*cone;}
-[loop]for(int j=0;j<DynamicSettings.x;j++){float3 d=DP[j].xyz-i.world;float dist=length(d);float atten=saturate(1-dist*DP[j].w);[branch]if(atten<=0)continue;float3 toward=d/max(dist,.0001);float cone=smoothstep(DD[j].w,DC[j].w,dot(-toward,DD[j].xyz));spotIllumination+=DC[j].rgb*atten*atten*smoothstep(-.5,1,dot(n,toward))*cone;}
+[loop]for(int k=0;k<LocalSettings.x;k++){float3 d=LP[k].xyz-i.world;float dist=length(d);float atten=saturate(1-dist*abs(LP[k].w));[branch]if(atten<=0)continue;float sheltered=LP[k].w<0?1-exposure:1;float3 toward=d/max(dist,.0001);float cone=smoothstep(LD[k].w,LC[k].w,dot(-toward,LD[k].xyz));spotIllumination+=LC[k].rgb*atten*atten*saturate(dot(n,toward))*cone*sheltered;}
+[loop]for(int j=0;j<DynamicSettings.x;j++){float3 d=DP[j].xyz-i.world;float dist=length(d);float atten=saturate(1-dist*abs(DP[j].w));[branch]if(atten<=0)continue;float shadeBoost=DP[j].w<0?1+DynamicSettings.y*(1-visibility*exposure):1;float3 toward=d/max(dist,.0001);float cone=smoothstep(DD[j].w,DC[j].w,dot(-toward,DD[j].xyz));spotIllumination+=DC[j].rgb*atten*atten*smoothstep(-.5,1,dot(n,toward))*cone*shadeBoost;}
 // SunSet spotlights.fx ApplySpotLights caps the combined diffuse vector
 // at 4.5 before HDR compression. Match it across world and vehicle lights.
 float spotPower=length(spotIllumination);

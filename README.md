@@ -1,8 +1,10 @@
-# W2C to MW 2.0.0 — Converter RC4 Preview
+# W2C to MW 2.0.0 — Converter RC5
 
 [日本語](README.ja.md)
 
-Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. This Windows x64 tool converts the original [W2C (World to Carbon) 2.0.0](https://nfsmods.xyz/mod/3041) files on your PC and can install the resulting world in a separate Most Wanted game folder. This is the first public release of the converter.
+Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. This Windows x64 tool converts the original [W2C (World to Carbon) 2.0.0](https://nfsmods.xyz/mod/3041) files on your PC and can install the resulting world in a separate Most Wanted game folder.
+
+[Converter RC5](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc5) · [RC4 to RC5 Patch](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch)
 
 > **Do not redistribute conversion output.** Generate your own pack from the original files. See [Redistribution](#redistribution) below.
 
@@ -34,6 +36,8 @@ Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. Th
 - [Unlimiter](https://github.com/nlgxzef/NFSMWUnlimiter/releases) and [Extra Options](https://github.com/ExOptsTeam/NFSMWExOpts/releases) are detected if installed. The base conversion does not require them or change their settings. Event Loader, Event Editor and Save Virtualizer are not prerequisites. Save Virtualizer and its save sidecars are not included.
 
 ## Install and remove
+
+If you already installed the public RC4, use the separate RC4 to RC5 Patch to update that game folder. If the patch fails, use Converter RC5 to rebuild from the original W2C 2.0.0 files.
 
 1. Close the game and its launcher. Back up your saves and use a separate Most Wanted game folder without another world loader.
 2. In **Releases → Assets**, download the Windows x64 converter ZIP. Extract it fully, keep `_internal` beside `W2C-to-MW-Converter.exe`, and open the EXE.

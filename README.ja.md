@@ -1,8 +1,12 @@
-# W2C to MW 2.0.0 — Converter RC4 Preview
+# W2C to MW 2.0.0 — Converter RC5
 
 [English](README.md)
 
-**Need for Speed: Most Wanted（2005）で、ロックポートとパルモントを走ろう。** [W2C（World to Carbon）2.0.0](https://nfsmods.xyz/mod/3041) の原本から、Most Wanted用のワールドを自分のPCで変換するWindows x64向けツールです。変換済みパックの保存と、独立したMost Wanted環境への自動配置ができます。コンバーターの初回公開版です。
+**Need for Speed: Most Wanted（2005）で、ロックポートとパルモントを走ろう。** [W2C（World to Carbon）2.0.0](https://nfsmods.xyz/mod/3041) の原本から、Most Wanted用のワールドを自分のPCで変換するWindows x64向けツールです。変換済みパックの保存と、独立したMost Wanted環境への自動配置ができます。
+
+[コンバーター RC5](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc5) · [RC4→RC5パッチャー](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch)
+
+公開版RC4を導入済みの場合は、専用パッチャーで更新できます。適用に失敗する場合は、コンバーターRC5でW2C 2.0.0の原本から再構築してください。
 
 > **変換生成物は再配布厳禁です。** 各自で原本から変換してください。詳しくは下記の「再配布について」をご覧ください。
 

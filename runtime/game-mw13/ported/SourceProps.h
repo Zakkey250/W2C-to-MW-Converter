@@ -17,17 +17,27 @@ static bool LoadSourcePropHierarchies(){try{
  propHierarchies=std::move(trees);propPursuitParameters=std::move(names);for(const auto& [asset,tree]:propHierarchies)propPursuitAssets.insert(asset);propHierarchyEnabled=true;propPursuitPayload=true;return true;
  }catch(const std::exception& error){Log("SOURCE_PROP_TREES_REFUSED reason=%s",error.what());++v2Failures;return false;}}
 static bool LoadSourcePropCatalog(){try{
- using namespace w2v2disk;std::vector<std::unique_ptr<NativeProp>> staged;
+ using namespace w2v2disk;std::vector<std::unique_ptr<NativeProp>> staged;unsigned nextId=0;
 #ifdef W2C_PUBLIC_BUILD
  if(sourceCarbonPursuit){
 #endif
  auto input=SourceInput(61,"native/prop-placements");need(input.get<unsigned>()==0x31504d57,"source prop catalog magic");auto n=input.get<unsigned>();need(n>0&&n<=100000&&input.remaining()==U(n)*64,"source prop catalog count/size");
- for(unsigned i=0;i<n;++i){auto p=std::make_unique<NativeProp>();p->id=i;input.read(p->record,64);for(unsigned j=0;j<3;++j){float x;memcpy(&x,p->record+16+j*4,4);need(std::isfinite(x),"source prop position");}unsigned asset;memcpy(&asset,p->record+32,4);need(propHierarchies.count(asset)&&propPursuitParameters.count(asset),"source prop catalog dependency");staged.push_back(std::move(p));}input.end();
+ nextId=n;
+ for(unsigned i=0;i<n;++i){
+  auto p=std::make_unique<NativeProp>();p->id=i;input.read(p->record,64);
+#ifdef W2C_PUBLIC_BUILD
+  if(worldClosureAddon.props.count(i))continue;
+#endif
+  for(unsigned j=0;j<3;++j){float x;memcpy(&x,p->record+16+j*4,4);need(std::isfinite(x),"source prop position");}
+  unsigned asset;memcpy(&asset,p->record+32,4);
+  need(propHierarchies.count(asset)&&propPursuitParameters.count(asset),"source prop catalog dependency");
+  staged.push_back(std::move(p));
+ }input.end();
 #ifdef W2C_PUBLIC_BUILD
  }
 #endif
- auto appendPlacement=[&staged](const std::array<BYTE,64>& record){
-  auto prop=std::make_unique<NativeProp>();prop->id=unsigned(staged.size());
+ auto appendPlacement=[&staged,&nextId](const std::array<BYTE,64>& record){
+  auto prop=std::make_unique<NativeProp>();prop->id=nextId++;
   memcpy(prop->record,record.data(),record.size());staged.push_back(std::move(prop));
  };
 #ifdef W2C_PUBLIC_BUILD

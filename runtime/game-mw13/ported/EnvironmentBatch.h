@@ -8,7 +8,14 @@ static void BuildEnvironmentTiles(CpuSection& data){std::vector<Mesh> meshes;std
    else sourceGroups.push_back({1,source.firstVertex,source.vertexCount,0});}}
  data.meshes=std::move(meshes);data.indices=std::move(indices);data.header.meshes=unsigned(data.meshes.size());data.lights.reserve(data.meshes.size());
  for(auto& m:data.meshes){EnvironmentMeshLights result;result.day.fill(~0u);result.night.fill(~0u);Vec3 mid{(m.minimum.x+m.maximum.x)*.5f,(m.minimum.y+m.maximum.y)*.5f,(m.minimum.z+m.maximum.z)*.5f};std::vector<std::pair<float,unsigned>> day,night;int gx=int(std::floor(mid.x/64)),gy=int(std::floor(mid.y/64));
-  for(int x=gx-2;x<=gx+2;++x)for(int y=gy-2;y<=gy+2;++y){auto it=envLightGrid.find({x,y});if(it==envLightGrid.end())continue;for(auto n:it->second){auto& l=envLights[n];float dx=std::max({m.minimum.x-l.position.x,0.f,l.position.x-m.maximum.x}),dy=std::max({m.minimum.y-l.position.y,0.f,l.position.y-m.maximum.y}),dz=std::max({m.minimum.z-l.position.z,0.f,l.position.z-m.maximum.z});if(dx*dx+dy*dy+dz*dz>l.range*l.range)continue;dx=l.position.x-mid.x;dy=l.position.y-mid.y;dz=l.position.z-mid.z;float distance=dx*dx+dy*dy+dz*dz;night.push_back({distance,n});if(!(l.flags&1))day.push_back({distance,n});}}
+  for(int x=gx-2;x<=gx+2;++x)for(int y=gy-2;y<=gy+2;++y){auto it=envLightGrid.find({x,y});if(it==envLightGrid.end())continue;for(auto n:it->second){auto& l=envLights[n];float dx=std::max({m.minimum.x-l.position.x,0.f,l.position.x-m.maximum.x}),dy=std::max({m.minimum.y-l.position.y,0.f,l.position.y-m.maximum.y}),dz=std::max({m.minimum.z-l.position.z,0.f,l.position.z-m.maximum.z});if(dx*dx+dy*dy+dz*dz>l.range*l.range)continue;dx=l.position.x-mid.x;dy=l.position.y-mid.y;dz=l.position.z-mid.z;float distance=dx*dx+dy*dy+dz*dz;
+#ifdef W2C_PUBLIC_BUILD
+   if(!(l.flags&publicCeilingFlareLight))night.push_back({distance,n});
+   if(!(l.flags&1)||(l.flags&publicCeilingLight))day.push_back({distance,n});
+#else
+   night.push_back({distance,n});if(!(l.flags&1))day.push_back({distance,n});
+#endif
+  }}
   std::sort(day.begin(),day.end());std::sort(night.begin(),night.end());for(unsigned n=0;n<std::min(8u,unsigned(day.size()));++n)result.day[n]=day[n].second;for(unsigned n=0;n<std::min(8u,unsigned(night.size()));++n)result.night[n]=night[n].second;data.lights.push_back(result);}
  std::map<std::vector<unsigned>,unsigned> groups;std::vector<Mesh> merged;std::vector<EnvironmentMeshLights> mergedLights;std::vector<unsigned> mergedOwnership;std::vector<std::vector<unsigned>> pieces;
  for(unsigned n=0;n<data.meshes.size();++n){auto& m=data.meshes[n];auto& l=data.lights[n];// A shared vertex buffer permits opaque objects with different source

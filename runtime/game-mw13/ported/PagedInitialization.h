@@ -3,6 +3,9 @@
 #include "SourcePinnedGeneration.h"
 #endif
 #include "SourceGlobalContext.h"
+#ifdef W2C_PUBLIC_BUILD
+#include "../../format/CollisionAddon.h"
+#endif
 static bool V2InitializePacks(){try{
 #ifdef W2C_PUBLIC_BUILD
  v2Store.open(std::filesystem::path(root)/sourcePublicGeneration/"World",sourcePublicIndexSha);
@@ -17,7 +20,24 @@ static bool V2InitializePacks(){try{
  auto e=v2Store.find(60,"collision");auto bytes=v2Store.read(e);w2v2disk::Record record;record.kind=e.kind;record.source=e.key;record.meta=e.meta;record.count=e.count;record.stride=e.stride;w2v2disk::wmc(record,bytes);
  // The source ledger was validated above; the frozen legacy count is not
  // the identity of a newly generated original-source collision world.
- if(!collision.LoadBytes(bytes,unsigned(e.count)))throw std::runtime_error("native collision load failed");
+ unsigned collisionCount=unsigned(e.count);
+#ifdef W2C_PUBLIC_BUILD
+ try {
+  const auto path=std::filesystem::path(root)/"W2CMWPublic"/"AddOns"/"collision.json";
+  if(std::filesystem::exists(path)){
+   w2v2disk::File file(path);
+   const auto patch=w2v2disk::parse(file.read(0,file.size,4*w2v2disk::MiB),4*w2v2disk::MiB);
+   auto closures=ReadWorldClosureAddon(patch);
+   bytes=w2collision::apply(bytes,patch,sourcePublicBuild);
+   worldClosureAddon=std::move(closures);
+   collisionCount=w2v2disk::r32(bytes,8);
+   Log("COLLISION_ADDON_ACTIVE walls=%u floor=%u",unsigned(patch["removeWalls"].size()),unsigned(patch["addFloor"].size()));
+   if(worldLogEnabled&&!worldClosureAddon.draws.empty())
+    Log("WORLD_CLOSURE_ADDON_ACTIVE sections=%u props=%u",unsigned(worldClosureAddon.draws.size()),unsigned(worldClosureAddon.props.size()));
+  }
+ } catch(const std::exception& error) { Log("COLLISION_ADDON_REFUSED reason=%s",error.what()); }
+#endif
+ if(!collision.LoadBytes(bytes,collisionCount))throw std::runtime_error("native collision load failed");
  auto calibration=w2v2disk::parse(SourceBytes(71,"world-and-radar-calibration"),65536);auto p=calibration.at("parameters");w2v2disk::need(p.is_array()&&p.size()==4&&w2v2disk::str(calibration["sourceSha256"])==v2Store.find(70,"world-and-radar-map").sha,"original map calibration identity");double sx=w2v2disk::number(p[0]),ox=w2v2disk::number(p[1]),sy=w2v2disk::number(p[2]),oy=w2v2disk::number(p[3]);w2v2disk::need(sx>.01&&sx<10&&sy>.01&&sy<10,"original map scale bounds");world_radar::World={float(-6016-ox/sx),float(546+(oy-2048)/sy),float(2048/((sx+sy)*.5)),0};
  Log("V2_PACKS_ACTIVE build=%s sections=%u index_bytes=%llu collision_from_pack=1",v2Store.buildId.c_str(),unsigned(sections.size()),v2Store.indexBytes);return true;
  }catch(const std::exception& error){W2V2Status.error=1;++v2Failures;Log("V2_INIT_REFUSED reason=%s",error.what());return false;}}

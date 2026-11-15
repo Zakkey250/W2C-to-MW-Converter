@@ -39,11 +39,17 @@ static bool LoadW2CWeatherZones(){
 }
 static void(__cdecl* w2cWeatherCullOriginal)(void*);
 static bool w2cSourceCovered=false;
+#ifdef W2C_PUBLIC_BUILD
+static bool w2cPlayerInTunnel=false;
+#endif
 static void(__cdecl* w2cRainDrawOriginal)(bool);
 static void InstallW2CRainDraw();
 static void W2CUpdateWeatherCover(){
  __try{
   w2cSourceCovered=false;
+#ifdef W2C_PUBLIC_BUILD
+  w2cPlayerInTunnel=false;
+#endif
   if(!W2MW_IsWorldActiveV1()||*reinterpret_cast<int*>(0x925E90)!=6)return;
   auto rain=*reinterpret_cast<BYTE**>(0x9196B8);
   auto camera=*reinterpret_cast<D3DMATRIX**>(0x919650);
@@ -58,10 +64,13 @@ static void W2CUpdateWeatherCover(){
   bool sourceCovered=cover.roof;
   if(!cover.roof)cover=W2CWorldWeatherCover(collision,position);
   w2cSourceCovered=cover.roof;
+#ifdef W2C_PUBLIC_BUILD
+  w2cPlayerInTunnel=physicalPlayer&&cover.tunnel;
+#endif
   // Rain layout from SunSet Rain.h: 0x8F integers precede these native flags.
   *reinterpret_cast<int*>(rain+0x23C)=cover.tunnel?1:0;
   *reinterpret_cast<int*>(rain+0x240)=cover.roof&&!cover.tunnel?1:0;
-  static DWORD next=0;DWORD now=GetTickCount();if(now>=next){next=now+2000;
+  static DWORD next=0;DWORD now=worldLogEnabled?GetTickCount():0;if(worldLogEnabled&&now>=next){next=now+2000;
    Log("W2C_WEATHER_COVER roof=%u tunnel=%u roof_height=%.3f position=%.3f,%.3f,%.3f physical_player=%u source_zone=%u native_flags_updated_before_SunSet=1",
     unsigned(cover.roof),unsigned(cover.tunnel),cover.roofHeight,position.x,position.y,position.z,unsigned(physicalPlayer),unsigned(sourceCovered));}
  }__except(EXCEPTION_EXECUTE_HANDLER){static bool reported=false;if(!reported){reported=true;Log("W2C_WEATHER_COVER_FAULT code=%08X",GetExceptionCode());}}
