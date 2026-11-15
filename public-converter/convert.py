@@ -1,4 +1,4 @@
-"""Build a local W2C 2.0.0 world for Most Wanted EN-US 1.3 LAA."""
+"""Build a local W2C 2.0.0 world for Most Wanted."""
 
 import argparse
 import json
@@ -57,8 +57,6 @@ def convert(w2c, mw, quality, output, work=None, *, carbon=None, vault_tool=None
     if not output.parent.is_dir() or output.exists():
         raise ValueError("Choose a new output folder inside an existing directory.")
     inputs = tuple(path for path in (w2c, mw, carbon, vault_tool, mw_reference) if path is not None)
-    if vault_tool is not None and carbon is None:
-        raise ValueError("Select the Carbon game folder to rebuild its pursuit breakers.")
     if any(output.is_relative_to(root) for root in inputs):
         raise ValueError("Choose an output folder outside the original game and mod directories.")
     if work is not None and (work.exists() or any(work.is_relative_to(root) for root in (*inputs, output))):
@@ -97,6 +95,7 @@ def convert(w2c, mw, quality, output, work=None, *, carbon=None, vault_tool=None
             "worldEffects": report["worldEffects"],
             "worldMotions": report["worldMotions"],
             "pursuit": report["pursuit"],
+            "carbonPursuitOmission": report["carbonPursuitOmission"],
             "pendingFeatures": report["pendingFeatures"],
         }
         progress("検証済みパックを保存", 95)

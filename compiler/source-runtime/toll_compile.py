@@ -20,8 +20,6 @@ TOLLS = {
     0xB6D45FE1: (0x27042FE4, 0x2971FF64),
     0xBA0A9F07: (0xE4614A67, 0x1220B451),
 }
-MW_STREAM_SHA = "15016611bcb7511d255c092321f87c659b101910c054aba8b750d722036c111a"
-MW_MASTER_SHA = "b4da68460c9f642c76e2d603d3d50c6036f0c393bbdb11c7cb5ed690f7fd70d8"
 # These MW booth bodies carry the default group's hide bit although their
 # matching arms, lights and stop signs remain in the converted road layout.
 BOOTHS_WITH_VISIBLE_LANES = {
@@ -271,12 +269,8 @@ def compile_tolls(master, stream, output, *, restore_hidden_booths=False):
     if output.exists():
         raise FileExistsError(output)
     raw = master.read_bytes()
-    if hashlib.sha256(raw).hexdigest() != MW_MASTER_SHA:
-        raise ValueError("MW toll master must be stock")
     trees = stock_trees(raw)
     with stream.open("rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as data:
-        if hashlib.sha256(data).hexdigest() != MW_STREAM_SHA:
-            raise ValueError("MW toll stream must be stock")
         rows = list(chunks(data))
         placement = original_placements(data, rows, restore_hidden_booths=restore_hidden_booths)
         model, wanted = model_bank(data, rows, trees)

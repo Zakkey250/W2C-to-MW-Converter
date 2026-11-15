@@ -1,9 +1,9 @@
-param([string]$Python, [string]$VaultToolReference, [string]$ReuseVaultHelper)
+param([string]$Python, [string]$VaultToolReference, [string]$ReuseVaultHelper, [string]$BuildRoot)
 
 $ErrorActionPreference='Stop'
 $project=Split-Path $PSScriptRoot
 $desktop=Join-Path $project 'public-converter'
-$build=Join-Path $project 'build/desktop'
+$build=if($BuildRoot){[System.IO.Path]::GetFullPath($BuildRoot)}else{Join-Path $project 'build/desktop'}
 New-Item -ItemType Directory -Path $build -Force | Out-Null
 if(!$Python){
     $Python=Join-Path $build 'clean-env/Scripts/python.exe'
@@ -46,6 +46,11 @@ foreach($path in @($repacker,$vault,$rules,(Join-Path $desktop 'catalog.json'),(
     (Join-Path $desktop 'pursuit.py'),(Join-Path $desktop 'carbon_sequences.py'),(Join-Path $desktop 'palmont_districts.py'),
     (Join-Path $desktop 'public_night_materials.py'),(Join-Path $desktop 'public_world_effects.py'),
     (Join-Path $desktop 'converter_locale.py'),(Join-Path $desktop 'translations.json'),(Join-Path $desktop 'rollback_app.py'),
+    (Join-Path $PSScriptRoot 'prepare_public_breaker_inputs.py'),
+    (Join-Path $project 'compiler/source-world/SourceExport.cs'),
+    (Join-Path $project 'compiler/source-runtime/cameras_compile.py'),
+    (Join-Path $project 'compiler/source-runtime/carbon_camera_plan.py'),
+    (Join-Path $project 'compiler/source-runtime/curve_oracle.py'),
     (Join-Path $desktop 'assets/world-city-coverage.w2g'),
     (Join-Path $project 'compiler/source-runtime/attributes_compile.py'),
     (Join-Path $project 'compiler/source-runtime/prop_compile.py'),

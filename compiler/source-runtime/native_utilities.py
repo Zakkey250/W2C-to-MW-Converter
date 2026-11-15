@@ -12,7 +12,6 @@ from source_ir import Container, chunks
 from toll_compile import native_models, native_textures, write_native_models, write_native_textures
 
 
-STREAM_SHA256 = "15016611bcb7511d255c092321f87c659b101910c054aba8b750d722036c111a"
 MODELS = {
     0x2A908C13: ("XO_SPIKEBELT_1B_DW_00", {0x06C142FC, 0xD5FAA405}),
     0x3393B8E2: ("XO_SAWHORSE_1B_00", {0x3B1AD9AC, 0x4B1A66F9, 0x8C3E07E6, 0x9ED8F353, 0xBD712F3E}),
@@ -30,8 +29,7 @@ def main(work, stream, output, *, imported=None):
     if output.exists():
         raise ValueError("Immutable utility generation exists")
     with stream.open("rb") as source, mmap.mmap(source.fileno(), 0, access=mmap.ACCESS_READ) as data:
-        if sha(data) != STREAM_SHA256:
-            raise ValueError("Pristine MW source identity")
+        source_sha = sha(data)
         rows = list(chunks(data))
         models, model_template = native_models(data, rows, MODELS.keys())
         textures, texture_template = native_textures(data, rows, TEXTURES)
@@ -57,7 +55,7 @@ def main(work, stream, output, *, imported=None):
     (output / "models.bun").write_bytes(geometry)
     (output / "textures.bin").write_bytes(tpk)
     report = {
-        "originalStreamSha256": STREAM_SHA256,
+        "originalStreamSha256": source_sha,
         "models": [{"key": f"{key:08x}", "name": MODELS[key][0], "originalOffset": offset,
                     "objectSha256": sha(payload)} for key, (offset, payload, _) in sorted(models.items())],
         "textures": [{"key": f"{key:08x}", "pixelSha256": sha(value[2])} for key, value in sorted(textures.items())],

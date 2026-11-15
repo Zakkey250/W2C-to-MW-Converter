@@ -10,6 +10,12 @@ STREAM = "TRACKS/STREAML2RA.BUN"
 RULES = json.loads(Path(__file__).with_name("rules.json").read_bytes())
 
 
+def stream_digest(value):
+    if not isinstance(value, str) or not re.fullmatch("[0-9a-f]{64}", value):
+        raise ValueError("Invalid MW stream fingerprint.")
+    return value
+
+
 def target_core(value):
     if (not isinstance(value, dict) or set(value) != {*CORE, STREAM}
             or any(not isinstance(digest, str) or not re.fullmatch("[0-9a-f]{64}", digest)

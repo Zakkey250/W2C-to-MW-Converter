@@ -33,6 +33,10 @@ static bool SourceDeploymentAllowed() {
     need(IsPublicDigest(str(core.at(name),64)),"public W2C target resource fingerprint");
    manifest.erase("targetCore");
   }
+  if(manifest.is_object()&&manifest.contains("streamSha256")){
+   need(IsPublicDigest(str(manifest.at("streamSha256"),64)),"public W2C installed stream fingerprint");
+   manifest.erase("streamSha256");
+  }
   keys(manifest,{"schema","packageId","generation","quality","indexSha256","runtimeSha256"});
   need(uintv(manifest.at("schema"))==1&&str(manifest.at("packageId"))=="W2CMWPublic",
        "public W2C installation manifest");

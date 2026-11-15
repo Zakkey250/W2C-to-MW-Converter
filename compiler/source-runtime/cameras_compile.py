@@ -53,7 +53,6 @@ def camera_key(first, last, parameter):
 def compile_camera_assets(executable, ingame, track_path, scene_plan):
     from curve_oracle import evaluate
 
-    if hashlib.sha256(executable.read_bytes()).hexdigest()!='590239474994375c56c4675839ed8ed23bae76e3c0aad2d5ccdb8ec1883b2ac7':raise ValueError('Original Carbon curve decoder identity')
     camera_body=bytearray();marker_body=bytearray();report=[]
     marker_data=[data for tag,_,data in chunks(track_path.read_bytes()) if tag==0x34146]
     if len(marker_data)!=1 or marker_data[0][:8]!=bytes([0x11])*8:raise ValueError('Unexpected marker bank')
@@ -100,7 +99,7 @@ def compile_camera_assets(executable, ingame, track_path, scene_plan):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--executable',type=Path,required=True);parser.add_argument('--ingame',type=Path,required=True);parser.add_argument('--track',type=Path,required=True);parser.add_argument('--output',type=Path,required=True)
+    parser=argparse.ArgumentParser();parser.add_argument('--executable',type=Path);parser.add_argument('--ingame',type=Path,required=True);parser.add_argument('--track',type=Path,required=True);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--scene-plan',type=Path,help='Explicit list of source, target and marker names; no missing source substitution')
     args=parser.parse_args()
     if args.output.exists() and any(args.output.iterdir()):raise ValueError('Immutable source camera output exists')
@@ -109,7 +108,7 @@ def main():
     args.output.mkdir(parents=True,exist_ok=True)
     for name,data in [('carbon-moment-cameras.bun',cameras),('carbon-moment-markers.bin',markers)]:
         (args.output/name).write_bytes(data)
-    result=dict(privatePrototype=True,scenes=report,files=[dict(path=n,bytes=len(d),sha256=hashlib.sha256(d).hexdigest()) for n,d in [('carbon-moment-cameras.bun',cameras),('carbon-moment-markers.bin',markers)]],sourceExecutableSha256=hashlib.sha256(args.executable.read_bytes()).hexdigest(),sourceIngameSha256=hashlib.sha256(args.ingame.read_bytes()).hexdigest(),sourceTrackSha256=hashlib.sha256(args.track.read_bytes()).hexdigest(),nativeFilesModified=False,runtimeVerified=False)
+    result=dict(privatePrototype=True,scenes=report,files=[dict(path=n,bytes=len(d),sha256=hashlib.sha256(d).hexdigest()) for n,d in [('carbon-moment-cameras.bun',cameras),('carbon-moment-markers.bin',markers)]],sourceExecutableSha256=hashlib.sha256(args.executable.read_bytes()).hexdigest() if args.executable else None,sourceIngameSha256=hashlib.sha256(args.ingame.read_bytes()).hexdigest(),sourceTrackSha256=hashlib.sha256(args.track.read_bytes()).hexdigest(),nativeFilesModified=False,runtimeVerified=False)
     (args.output/'moment-build-report.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8');print(json.dumps(result,indent=2))
 
 

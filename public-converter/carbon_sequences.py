@@ -68,7 +68,7 @@ def compile_carbon_pursuit_recipe(carbon, mw_master, source_rows, native_rows, r
     while True:
         plan = plan_sequence_assets(source["sequences.bun"], track, source_rows, native_rows, roots, namespace=namespace)
         gaps = plan["closure"]["missingOriginalReferences"]
-        if gaps == [expected_gap]:
+        if not gaps or gaps == [expected_gap]:
             break
         missing = [gap for gap in gaps if gap != expected_gap]
         if not missing or any(gap["kind"] != "original child collection absent" for gap in missing):
@@ -76,7 +76,7 @@ def compile_carbon_pursuit_recipe(carbon, mw_master, source_rows, native_rows, r
         restore_missing({gap["hash"] for gap in missing})
     names = sorted(set(roots) | set(plan["closure"]["smackables"]))
     attributes = compile_attributes(output, native_rows, source_rows, names, namespace=namespace)
-    return {"attributes": attributes, "originalInputs": provenance, "originalGaps": [expected_gap],
+    return {"attributes": attributes, "originalInputs": provenance, "originalGaps": gaps,
             "placementRoots": len(set(roots)), "sequenceAliases": plan["engineAliases"]}
 
 
@@ -145,6 +145,7 @@ def compile_carbon_prop_payload(source, native, native_master_ir, source_rows, n
 
 
 def decode_camera_assets(executable, original_cameras, master, scene_plan, work):
+    work.mkdir()
     plan = work / "camera-plan.json"
     plan.write_text(json.dumps(scene_plan), encoding="utf-8")
     output = work / "decoded"
@@ -159,8 +160,9 @@ def decode_camera_assets(executable, original_cameras, master, scene_plan, work)
     else:
         script = Path(__file__).resolve().parents[1] / "compiler/source-runtime/cameras_compile.py"
         command = [sys.executable, "-B", script]
-    command += ["--executable", executable, "--ingame", original_cameras, "--track", master,
-                "--scene-plan", plan, "--output", output]
+    if executable is not None:
+        command += ["--executable", executable]
+    command += ["--ingame", original_cameras, "--track", master, "--scene-plan", plan, "--output", output]
     process = subprocess.run([str(part) for part in command], cwd=work, env=env, capture_output=True,
                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), timeout=480)
     if process.returncode:
@@ -180,10 +182,10 @@ def compile_carbon_sequences(carbon, master, mw_master, source_rows, target_rows
     missing = plan["missingConvertedChildParameters"]
     if missing:
         raise ValueError("Missing MW pursuit attributes: " + ", ".join(missing))
-    scene_plan, camera_source = plan_breaker_cameras(
+    scene_plan, camera_source, missing_cameras = plan_breaker_cameras(
         sequence_bank, plan["engineRenames"],
-        (("carbon-ice", extracted["cameras-ingameb.bun"]),
-         ("mw-native-keys", extracted["cameras-ingamec.bun"])),
+        (("carbon-ice", extracted.get("cameras-ingameb.bun", b"")),
+         ("mw-native-keys", extracted.get("cameras-ingamec.bun", b""))),
         master.read_bytes(),
     )
     work = Path(work)
@@ -191,10 +193,25 @@ def compile_carbon_sequences(carbon, master, mw_master, source_rows, target_rows
     original_cameras = work / "original-camera-groups.bun"
     with original_cameras.open("xb") as stream:
         stream.write(camera_source)
-    cameras, markers, camera_report = decode_camera_assets(
-        carbon / provenance["decoder"]["path"], original_cameras, master, scene_plan, work)
+    native_scenes = [scene for scene in scene_plan if scene["sourceEncoding"] == "mw-native-keys"]
+    attempts = [(carbon / name, scene_plan) for name in provenance["decoderCandidates"] if scene_plan != native_scenes]
+    if native_scenes:
+        attempts.append((None, native_scenes))
+    cameras = bytes.fromhex("00b2038000000000")
+    markers = bytes.fromhex("43424d31010000000000000034000000")
+    camera_report, camera_errors, decoded = [], [], []
+    for index, (executable, entries) in enumerate(attempts):
+        try:
+            cameras, markers, camera_report = decode_camera_assets(
+                executable, original_cameras, master, entries, work / f"decode-{index}")
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            camera_errors.append(f"{executable.name if executable else 'native camera keys'}: {error}")
+            continue
+        decoded = entries
+        break
+    missing_cameras += [scene["source"] for scene in scene_plan if scene not in decoded]
     sequences, routes, sequence_report, gaps = compile_sequence_assets(
-        sequence_bank, native_track, source_rows, target_rows, plan, scene_plan, namespace=namespace)
+        sequence_bank, native_track, source_rows, target_rows, plan, decoded, namespace=namespace)
     return {
         "sequences": sequences,
         "cameras": cameras,
@@ -205,5 +222,7 @@ def compile_carbon_sequences(carbon, master, mw_master, source_rows, target_rows
         "sequenceGroups": sequence_report,
         "sequenceAliases": len(routes["engines"]),
         "cameras": camera_report,
+        "omittedCameras": missing_cameras,
+        "cameraErrors": camera_errors,
         "originalGaps": gaps,
     }

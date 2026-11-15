@@ -4,7 +4,12 @@ static bool sourceSequencesReady=false;
 static bool LoadSourceSequences(){try{
  using namespace w2v2disk;
  auto sequences=SourceBytes(61,"native/sequences");auto names=w2source::validateNativeSequences(sequences);
- auto cameras=SourceBytes(61,"native/cameras");auto scenes=w2source::validateNativeCameras(cameras);
+ auto cameras=SourceBytes(61,"native/cameras");
+#ifdef W2C_PUBLIC_BUILD
+ auto scenes=w2source::validateNativeCameras(cameras,true);
+#else
+ auto scenes=w2source::validateNativeCameras(cameras);
+#endif
  auto markers=SourceBytes(61,"native/camera-markers");auto markerCount=w2source::validateNativeMarkers(markers,scenes);
  auto plan=parse(SourceBytes(61,"native/sequence-routes"),256*1024);
  need(uintv(plan["schema"])==1&&plan["engines"].is_array()&&plan["engines"].size()<=4096&&plan["cameraScenes"].is_array(),"source sequence route schema/count");
@@ -37,10 +42,12 @@ static bool LoadSourceSequences(){try{
  auto retain=[](const B& b){auto p=static_cast<BYTE*>(VirtualAlloc(nullptr,b.size(),MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE));need(p!=nullptr,"source native sequence allocation");memcpy(p,b.data(),b.size());return p;};
  // Registration fixes pointers in place and retains them for process life.
  carbonBreakerPack=retain(sequences);need(reinterpret_cast<int(__cdecl*)(void*)>(0x648210)(carbonBreakerPack)!=0,"source native sequence registration");
- carbonMomentCameraPack=retain(cameras);reinterpret_cast<void(__thiscall*)(void*,void*)>(0x4787c0)(reinterpret_cast<void*>(0x8ee320),carbonMomentCameraPack);
+ if(!scenes.empty()){
+  carbonMomentCameraPack=retain(cameras);reinterpret_cast<void(__thiscall*)(void*,void*)>(0x4787c0)(reinterpret_cast<void*>(0x8ee320),carbonMomentCameraPack);
+ }
  for(unsigned scene:scenes)need(reinterpret_cast<int(__thiscall*)(void*,unsigned)>(0x46e710)(reinterpret_cast<void*>(0x8ee320),scene)==1,"source native camera registration");
- static_assert(sizeof(CarbonMomentMarker)==52);carbonMomentMarkers.resize(markerCount);memcpy(carbonMomentMarkers.data(),markers.data()+16,markerCount*52);
- sourceEngineRoutes=std::move(routes);sourceCameraScenes=std::move(scenes);carbonBreakerFamilies=true;carbonBreakerMoments=true;
+ static_assert(sizeof(CarbonMomentMarker)==52);carbonMomentMarkers.resize(markerCount);if(markerCount)memcpy(carbonMomentMarkers.data(),markers.data()+16,markerCount*52);
+ sourceEngineRoutes=std::move(routes);sourceCameraScenes=std::move(scenes);carbonBreakerFamilies=true;carbonBreakerMoments=!sourceCameraScenes.empty();
  need(MH_EnableHook(create)==MH_OK&&MH_EnableHook(closest)==MH_OK,"source functional hook enable");
 #ifdef W2C_PUBLIC_BUILD
  need(MH_EnableHook(cameraEvent)==MH_OK&&MH_EnableHook(applyEvent)==MH_OK,"source camera/explosion hook enable");

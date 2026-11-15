@@ -16,7 +16,6 @@ from install import (
     ASI, CONTROL, MANIFEST, SETTINGS, SUNSET_TRANSACTION, checked_package, install, install_sunset, installer_lock, recover,
     require_game_closed, unplaced_package_present,
 )
-from package_layout import RULES
 from preflight import CATALOG, OPTIONAL_GAMEPLAY, carbon_row, check_target, checked_folder, runtime_rows, source_rows
 from pursuit import validate_vault_tool
 from setup_sourceworld import build_importer
@@ -251,10 +250,8 @@ class ConverterWindow:
             mw = self.get_folder("mw", tr('Most Wanted の導入先'))
             self.mw_reference = self.get_folder("mw_reference", tr('純正MWの参考元'), required=False)
             w2c = None if self.existing_package else self.get_folder("w2c", tr('W2C 2.0.0原本'))
-            carbon = self.get_folder("carbon", tr('Carbon 資源'), required=False)
-            vault_tool = self.get_folder("vault_tool", "OGVI 1.4", required=False) if not self.existing_package else None
-            if vault_tool and not carbon:
-                raise ValueError(tr('専用カメラを復元するにはCarbonのゲームフォルダーを指定してください。'))
+            carbon = self.get_folder("carbon", tr('Carbon 資源'), required=False) if not self.existing_package else None
+            vault_tool = self.get_folder("vault_tool", "OGVI 1.4", required=False) if carbon else None
         except (OSError, ValueError) as error:
             messagebox.showerror(tr('入力を確認'), localized_detail(str(error)), parent=self.root)
             return
@@ -271,8 +268,7 @@ class ConverterWindow:
             native = None
             try:
                 mw_target_base(mw)
-                if manifest is None or (manifest["targetCore"][STREAM] != RULES["mwInputs"][STREAM]
-                                        and not (mw / MANIFEST).is_file()):
+                if manifest is None:
                     mw_inputs(mw, self.mw_reference)
                 if vault_tool:
                     validate_vault_tool(vault_tool)
@@ -302,6 +298,8 @@ class ConverterWindow:
                       tr('ファイルとSHA-256を照合しました。'), tr('確認済み'))
         if native:
             self.card(tr('MWの原本資源'), native, tr('要確認'), ERROR)
+        if not self.existing_package:
+            self.card("Carbon", self.carbon["detail"])
         if self.carbon_source and not self.existing_package:
             if self.vault_tool and native is None:
                 self.card(tr('パースートブレーカーと専用カメラ'), tr('Carbon原本とOGVIを使って復元します。'), tr('有効'))
@@ -541,6 +539,10 @@ class ConverterWindow:
                 self.card(tr('省略された環境エフェクト'),
                           ", ".join(effects["omittedGroups"]), tr('確認'), WARNING)
             self.card(tr('資源の省略'), tr('未解決の地形テクスチャ {1}種、モデルが見つからない配置 {3}件。\nMW資源で動く小物を {5}件復元。別の小物 {7}件は外観のみ再現。動的な当たり判定・破壊は {9}件が未変換です。', None, len(summary['missingTerrainTextures']), None, summary['missingStaticPlacements'], None, format(summary['mwFallbackProps'], ','), None, format(summary['visualPropPlacements'], ','), None, format(summary['unconvertedDynamicPropPlacements'], ',')), tr('確認'), WARNING)
+            if pursuit and pursuit["omittedCameras"]:
+                self.card(tr('パースートブレーカーと専用カメラ'), ", ".join(pursuit["omittedCameras"]), tr('未対応'), WARNING)
+            if omission := summary["carbonPursuitOmission"]:
+                self.card(tr('パースートブレーカーと専用カメラ'), omission, tr('確認'), WARNING)
             limits = summary["pendingFeatures"]
             if limits:
                 self.card(tr('再現できていない機能'),

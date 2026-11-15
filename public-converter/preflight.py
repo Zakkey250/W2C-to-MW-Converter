@@ -141,22 +141,59 @@ def source_rows(root, quality):
         yield row("source", relative, "ok", "W2C 2.0.0原本と一致。", sha256=actual)
 
 
+def mw_runtime_layout(path):
+    # The ASI calls into these sections at fixed addresses. Localized PE
+    # resources and file padding are independent of the native interfaces.
+    expected = (
+        (b".text", 0x1000, 0x48E2A5, 0x48F000, 0x60000020,
+         "f258b7f607d10109c577e63497041476935793b8211e5acfd3cb88ac66b24470"),
+        (b".rdata", 0x490000, 0x5971D, 0x5A000, 0x40000040,
+         "fb27d471178fed85c12d31ee6a5c8dd3e891868ed9c04f19c0fecdbbe660ddc1"),
+        (b".data", 0x4EA000, 0xDCE10, 0x24000, 0xC0000040,
+         "2f00dcd3c0321f2da51d2b09e23ace8c3491400dc5e78da635d15b8ad3daa190"),
+    )
+    with path.open("rb") as stream:
+        dos = stream.read(64)
+        if len(dos) != 64 or dos[:2] != b"MZ":
+            return False
+        offset, = struct.unpack_from("<I", dos, 60)
+        if not 64 <= offset <= 1024 * 1024:
+            return False
+        stream.seek(offset)
+        header = stream.read(248)
+        if len(header) != 248 or header[:4] != b"PE\0\0":
+            return False
+        machine, count, _, _, _, optional_size, flags = struct.unpack_from("<HHIIIHH", header, 4)
+        if machine != 0x14C or not 3 <= count <= 96 or optional_size != 224 or flags & 0x2022 != 0x22:
+            return False
+        optional = header[24:]
+        if (struct.unpack_from("<H", optional)[0] != 0x10B
+                or struct.unpack_from("<I", optional, 16)[0] != 0x3C4040
+                or struct.unpack_from("<II", optional, 28) != (0x400000, 0x1000)
+                or struct.unpack_from("<H", optional, 70)[0] & 0x40):
+            return False
+        table = stream.read(count * 40)
+        if len(table) != count * 40:
+            return False
+        for index, (label, va, virtual, raw, permissions, digest) in enumerate(expected):
+            name, vs, rva, size, at, _, _, _, _, attrs = struct.unpack_from("<8sIIIIIIHHI", table, index * 40)
+            if (name.rstrip(b"\0"), rva, vs, size, attrs) != (label, va, virtual, raw, permissions):
+                return False
+            stream.seek(at)
+            if hashlib.sha256(stream.read(min(virtual, raw))).hexdigest() != digest:
+                return False
+        return True
+
+
 def check_target(root):
     path = file_at(root, "speed.exe")
     if not path.is_file():
         return row("target", "speed.exe", "stop", "Most Wantedの導入先を指定してください。")
-    header = pe_info(path)
-    size = path.stat().st_size
-    candidates = {profile["sha256"]: name for name, profile in CATALOG["targets"].items()
-                  if profile["bytes"] == size}
-    if not header or not header["win32"] or not header["laa"] or not candidates:
-        return row("target", "speed.exe", "stop",
-                   f"対応する speed.exe を使用してください（{' / '.join(CATALOG['targets'])}）。")
+    if not mw_runtime_layout(path):
+        return row("target", "speed.exe", "stop", "MW 1.3 LAA (32-bit) runtime layout required for ASI deployment.")
     actual = file_digest(path)
-    name = candidates.get(actual)
-    if name is None:
-        return row("target", "speed.exe", "stop", "対応する実行ファイルのSHA-256と一致しません。", sha256=actual)
-    return row("target", "speed.exe", "ok", f"{name}と一致。", distribution=name, sha256=actual)
+    name = next((name for name, profile in CATALOG["targets"].items() if actual == profile["sha256"]), None)
+    return row("target", "speed.exe", "ok", "MW 1.3 LAA runtime layout verified.", distribution=name, sha256=actual)
 
 
 def asi_loader_row(root):
@@ -320,7 +357,7 @@ def carbon_banks(root):
     if root is not None:
         for role, bank in CATALOG["carbonTextureBanks"].items():
             path = file_at(root, bank["path"])
-            if path.is_file() and path.stat().st_size == bank["bytes"] and file_digest(path).lower() == bank["sha256"]:
+            if path.is_file() and path.stat().st_size:
                 yield role, path, bank["textures"]
 
 
@@ -329,10 +366,10 @@ def carbon_row(root):
         return row("assets", "Carbon", "info", "未指定。W2CとMWの原本で変換します。")
     banks = {role: CATALOG["carbonTextureBanks"][role]["path"] for role, _, _ in carbon_banks(root)}
     missing = [bank["path"] for role, bank in CATALOG["carbonTextureBanks"].items() if role not in banks]
-    detail = ("照合済みのCarbon資源から、W2C原本にない空・照明・反射などのテクスチャを補います。"
+    detail = ("Carbonの画像バンクを検出しました。読み取れるテクスチャを変換時に取り込みます。"
               if banks else "対応するCarbon資源を検出できませんでした。W2CとMWの原本で変換します。")
     if missing:
-        detail += " 未検出または版が異なるバンクは変換に使いません。"
+        detail += " 見つからないバンクは省略します。"
     return row("assets", "Carbon", "info", detail, detected=list(banks.values()), missing=missing)
 
 

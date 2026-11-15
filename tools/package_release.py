@@ -8,7 +8,6 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build/desktop"
-APP = BUILD / "portable/W2C-to-MW-Converter"
 REQUIRED = {"W2C-to-MW-Converter.exe", "_internal/bin/W2CMWPublic.asi",
             "_internal/bin/W2CMWv2Repack.exe", "_internal/bin/PublicVault.exe",
             "_internal/bin/W2CMW-Rollback.exe", "_internal/base_library.zip",
@@ -35,20 +34,22 @@ def allowed(name):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--build", type=Path, default=BUILD, help="directory used by the desktop builder")
     ap.add_argument("--notices", required=True, type=Path, help="third-party notice files to store under notices/")
     ap.add_argument("--output", required=True, type=Path)
     n = ap.parse_args()
     if n.output.exists():
         raise FileExistsError(n.output)
-    _, entries = ast.literal_eval((BUILD / "pyinstaller-clean/W2C-to-MW-Converter/PYZ-00.toc").read_text(encoding="utf-8"))
+    app = n.build / "portable/W2C-to-MW-Converter"
+    _, entries = ast.literal_eval((n.build / "pyinstaller-clean/W2C-to-MW-Converter/PYZ-00.toc").read_text(encoding="utf-8"))
     assert any(row[0] == "setup_sourceworld" for row in entries)
     assert not any(row[0].split(".")[0] == "unicorn" for row in entries)
     files = {}
-    for f in APP.rglob("*"):
+    for f in app.rglob("*"):
         if f.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
             raise ValueError(f"Unexpected link: {f}")
         if f.is_file():
-            name = f.relative_to(APP).as_posix()
+            name = f.relative_to(app).as_posix()
             if not allowed(name):
                 raise ValueError(f"Unexpected component: {name}")
             files[name] = f

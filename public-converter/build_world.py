@@ -2,13 +2,15 @@
 
 import hashlib
 import json
+import mmap
 from pathlib import Path
 import shutil
 import struct
+from subprocess import SubprocessError
 import sys
 
 from preflight import CATALOG, file_at, file_digest
-from package_layout import CORE, RULES, STREAM, target_core
+from package_layout import CORE, RULES, STREAM, stream_digest, target_core
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -35,6 +37,7 @@ from pursuit import (PROP_PAYLOAD, PROP_TEXTURES, PURSUIT_FEATURE, PURSUIT_FILES
                      build_pursuit, import_native_mw)
 from scene_systems import compile_systems
 from source_ir import Container
+from source_ir import chunks
 from terrain_compile import compile_terrain
 from toll_compile import compile_tolls
 from verify_original_models import verify as verify_models
@@ -73,7 +76,7 @@ def build_assets(work, quality, progress=lambda *_: None, *, w2c=None, mw=None, 
     if not W2C_ROLES <= inputs.keys() <= W2C_ROLES | carbon_inputs.keys():
         raise ValueError("Unexpected W2C source inputs.")
     for role in inputs.keys() - W2C_ROLES:
-        if inputs[role]["sha256"] != carbon_inputs[role]["sha256"]:
+        if file_digest(Path(inputs[role]["path"])).lower() != inputs[role]["sha256"]:
             raise ValueError(f"Carbon input changed during import: {role}")
     master, stream = (Path(inputs[key]["path"]) for key in ("master", "world-stream"))
     expected = {Path(row["path"]).name: row["sha256"] for row in CATALOG["qualities"][quality]}
@@ -97,18 +100,25 @@ def build_assets(work, quality, progress=lambda *_: None, *, w2c=None, mw=None, 
     compile_systems(source, master, work / "scene", allow_shared=True, texture_animation_roles=W2C_ROLES)
     compile_all(source, work / "models", model_index, stream)
     restored_props = set()
+    restored_pursuit = False
     if mw is not None:
         references = mw_inputs(mw, mw_reference)
         if carbon is not None and vault_tool is not None:
-            restored_props = build_pursuit(work / "pursuit", source, master, stream, model_index, w2c, mw,
-                                           references, carbon, vault_tool, progress)
-        else:
+            try:
+                restored_props = build_pursuit(work / "pursuit", source, master, stream, model_index, w2c, mw,
+                                               references, carbon, vault_tool, progress)
+                restored_pursuit = True
+            except (ValueError, OSError, KeyError, struct.error, SubprocessError) as error:
+                if isinstance(error, OSError) and not isinstance(error, FileNotFoundError):
+                    raise
+                write_json(work / "carbon-pursuit-omission.json", str(error))
+        if not restored_pursuit:
             progress("MWの原本から動く小物を復元", 60)
             restored_props, _ = compile_mw_fallback(source, master, references["TRACKS/L2RA.BUN"],
                                                     references["TRACKS/STREAML2RA.BUN"], work / "mw-prop-fallback")
         progress("MW原本の純正イベントバリアを復元", 63)
         barrier_ir = work / "pursuit/mw-native"
-        if not barrier_ir.is_dir():
+        if not restored_pursuit:
             barrier_ir = work / "mw-barrier-source"
             import_native_mw({"mw-stream-pristine": references["TRACKS/STREAML2RA.BUN"],
                               "mw-master-pristine": references["TRACKS/L2RA.BUN"]}, barrier_ir, work,
@@ -125,29 +135,36 @@ def build_assets(work, quality, progress=lambda *_: None, *, w2c=None, mw=None, 
 
 
 def mw_inputs(mw, reference=None):
-    result = {}
-    for name, expected in RULES["mwInputs"].items():
-        candidates = ((file_at(reference, name),) if reference else (
-            file_at(mw, name), file_at(mw, "W2CMWPublic/originals/" + name)))
-        match = next((path for path in candidates if path.is_file() and file_digest(path).lower() == expected), None)
-        if match is None:
-            raise ValueError(f"純正MWのフォルダーを参考元として指定してください: {name}")
-        result[name] = match
-    if reference:
-        for name in ("GLOBAL/GLOBALB.BUN", "GLOBAL/InGameB.bun"):
-            result[name] = file_at(reference, name)
+    result = (mw_target_base(mw) if reference is None else
+              {name: file_at(reference, name) for name in (*CORE, STREAM)})
+    for name, required in ((CORE[0], {0x34110, 0x3B800, 0x8003B900}),
+                           (CORE[1], {0xB3300000}), (STREAM, {0x80134000, 0x80034100})):
+        path = result[name]
+        if not path.is_file() or not path.stat().st_size:
+            raise ValueError(f"Required MW source resource is missing: {name}")
+        try:
+            with path.open("rb") as stream, mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ) as data:
+                found = {kind for kind, _, _, _ in chunks(data)}
+            if required - found:
+                raise ValueError("Required chunks are missing.")
+        except (OSError, ValueError) as error:
+            raise ValueError(f"Could not read the MW resource {name}: {error}") from error
+    for name in ("GLOBAL/GLOBALB.BUN", "GLOBAL/InGameB.bun"):
+        result[name] = file_at(reference or mw, name)
     return result
 
 
 def mw_target_base(mw):
     state = file_at(mw, "W2CMWPublic/installation.json")
-    backup = target_core(json.loads(state.read_bytes()).get("targetCore", RULES["mwInputs"])) if state.is_file() else {}
+    active = json.loads(state.read_bytes()) if state.is_file() else None
+    backup = target_core(active.get("targetCore", RULES["mwInputs"])) if active is not None else {}
     result = {}
     for name in (*CORE, STREAM):
         path = file_at(mw, name)
-        if state.is_file() and (name in CORE or backup.get(name) != RULES["mwInputs"][name]):
+        if active is not None and (name in CORE or backup[STREAM] != stream_digest(
+                active.get("streamSha256", RULES["mwInputs"][STREAM]))):
             path = file_at(mw, "W2CMWPublic/originals/" + name)
-        if not path.is_file() or (state.is_file() and file_digest(path).lower() != backup.get(name)):
+        if not path.is_file() or (active is not None and file_digest(path).lower() != backup[name]):
             raise ValueError(f"導入前のMW資源を確認してください: {name}")
         result[name] = path
     return result
@@ -213,7 +230,7 @@ def assemble_world(work, w2c, quality, mw, package, *, mw_reference=None, target
     if terrain_report["statistics"].get("runtimePropPlacements", 0) != runtime_placements:
         raise ValueError("The terrain and moving props have different placement inventories.")
     has_fallback = fallback["uniqueSpawners"] > 0
-    new_sky, _ = append_sky(target_paths["GLOBAL/InGameA.bun"].read_bytes(), references[STREAM], target_ingamea=True)
+    new_sky, _ = append_sky(target_paths["GLOBAL/InGameA.bun"].read_bytes(), references[STREAM])
     package.mkdir()
     for name, content in zip(CORE, (new_master, new_sky)):
         path = package / "Core" / name
@@ -241,13 +258,15 @@ def assemble_world(work, w2c, quality, mw, package, *, mw_reference=None, target
     for row in read_rows(source / "textures-verified.jsonl"):
         role = row["metadata"]["origin"]["role"]
         if role in carbon_banks:
-            if carbon_banks[role]["textures"].get(row["key"]) != row["sha256"]:
+            if row["key"] not in carbon_banks[role]["textures"]:
                 raise ValueError(f"Unverified Carbon texture: {row['key']}")
             carbon_textures.append({"hash": row["key"], "name": row["metadata"]["texture"]["Name"],
                                     "bank": carbon_banks[role]["path"], "sha256": row["sha256"]})
     source_manifest = {
         "quality": quality, "version": CATALOG["w2cVersion"],
-        "w2c": catalog_files, "mw": RULES["mwInputs"], "carbonUsed": bool(carbon_textures or pursuit),
+        "w2c": catalog_files,
+        "mw": {name: file_digest(references[name]).lower() for name in (*CORE, STREAM)},
+        "carbonUsed": bool(carbon_textures or pursuit),
     }
     if target != RULES["mwInputs"]:
         source_manifest["mwTarget"] = target
@@ -290,6 +309,8 @@ def assemble_world(work, w2c, quality, mw, package, *, mw_reference=None, target
         writer.add(1, "world-definition", canonical(world), {"schema": 1}, role=3)
         if target != RULES["mwInputs"]:
             writer.add(61, "native/mw-target-core", canonical(target), role=3)
+        if source_manifest["mw"][STREAM] != RULES["mwInputs"][STREAM]:
+            writer.add(61, "native/mw-reference-stream", canonical(source_manifest["mw"][STREAM]), role=3)
         writer.add(11, "effective-materials", night_materials, {"schema": 1, **night_report}, role=3)
         add_file(writer, 51, "environment/world-city-coverage", CITY_COVERAGE, {"schema": 1, "cellMeters": 16})
         model_path = work / "models/models.gpu"
@@ -425,6 +446,8 @@ def assemble_world(work, w2c, quality, mw, package, *, mw_reference=None, target
         "missingPlacements": terrain_report["missingPlacements"],
         "nativePropPlacementsPending": terrain_report["statistics"].get("nativePropPlacements", 0) - runtime_placements,
         "visualPropPlacements": terrain_report["statistics"].get("visualPropPlacements", 0),
+        "carbonPursuitOmission": (json.loads((work / "carbon-pursuit-omission.json").read_bytes())
+                                  if (work / "carbon-pursuit-omission.json").is_file() else None),
         "pendingFeatures": ([] if pursuit else ["Dynamic physics and breakage for unmatched props",
                                                "Carbon pursuit breakers and their cameras"]),
     })

@@ -12,7 +12,7 @@ from preflight import check_target, checked_folder
 # Public RC4 executable shipped on GitHub. Other previews can use different
 # world features even if the installer and ASI have the same file names.
 RC4 = "76bb735bced9afdc46099a0d4aaa7adbb3cfe222f1511b8dbafcac28168a5220"
-UPDATE = "f76d7f02a63b14f989a1ddae89fcda5a03bcf72b24bda48fde4c20f3c2259b89"
+UPDATE = "1bae1ed1761ed2bb4920eca950cc05e7ae092adc21403e174b4894f58f56e3c6"
 REBUILD = ("If the patch still fails, run Converter RC5 and rebuild from the original W2C 2.0.0 files.\n"
            "適用に失敗する場合は、コンバーター RC5 で W2C 2.0.0 の原本から再構築してください。")
 PATCH_ERRORS = (OSError, ValueError, KeyError, CalledProcessError)
@@ -20,7 +20,7 @@ PATCH_ERRORS = (OSError, ValueError, KeyError, CalledProcessError)
 
 def update(mw, payload):
     if check_target(mw)["status"] != "ok":
-        raise ValueError("Select an installation with a supported Most Wanted speed.exe.")
+        raise ValueError("Select an installation with a compatible Most Wanted 1.3 LAA speed.exe.")
     if sha(payload) != UPDATE:
         raise ValueError("The RC5 ASI is missing or its SHA-256 is incorrect.")
     require_game_closed()

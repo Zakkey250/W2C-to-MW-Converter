@@ -1,6 +1,8 @@
 """Retain pristine MW's exact native sky bank after scenery suppression."""
-import hashlib,json,struct,sys
+import hashlib,json,mmap,struct,sys
 from pathlib import Path
+from toll_compile import word, aligned
+from source_ir import chunks
 def sha(b):return hashlib.sha256(b).hexdigest()
 def main(work,original_stream,output):
     work=Path(work);original_stream=Path(original_stream);output=Path(output)
@@ -8,17 +10,28 @@ def main(work,original_stream,output):
     original=(work/'offline-original-references/mw-pristine/GLOBAL/InGameA.bun').read_bytes()
     result,sky=append_sky(original,original_stream)
     output.mkdir(parents=True);(output/'InGameA.bun').write_bytes(result);(output/'original-sky-bank.bun').write_bytes(sky)
-    report=dict(passed=True,pristineStream=str(original_stream),pristineStreamSha256='15016611bcb7511d255c092321f87c659b101910c054aba8b750d722036c111a',nativeBankOffset=18686976,nativeBankBytes=len(sky),nativeBankSha256=sha(sky),sourceNativeSkyModel='ed85ba82',sourceNormalizedModelSha256='2fd80b3be05377ae6b2c443c3442438148277bb5af9ad66bed685e2d517358c6',originalInGameASha256=sha(original),outputBytes=len(result),outputSha256=sha(result),originalBankAndInGamePrefixByteExact=True,gameAccepted=False)
+    with original_stream.open('rb') as stream:
+        source_sha=hashlib.file_digest(stream,'sha256').hexdigest()
+    report=dict(passed=True,pristineStream=str(original_stream),pristineStreamSha256=source_sha,nativeBankBytes=len(sky),nativeBankSha256=sha(sky),sourceNativeSkyModel='ed85ba82',originalInGameASha256=sha(original),outputBytes=len(result),outputSha256=sha(result),originalBankAndInGamePrefixByteExact=True,gameAccepted=False)
     (output/'build-report.json').write_text(json.dumps(report,indent=2),encoding='utf-8');print(json.dumps(report))
 
-def append_sky(original,original_stream,*,target_ingamea=False):
-    with original_stream.open('rb') as f:
-        if hashlib.file_digest(f,'sha256').hexdigest()!='15016611bcb7511d255c092321f87c659b101910c054aba8b750d722036c111a':raise ValueError('Pristine MW stream identity')
-        f.seek(18686976);head=f.read(8);tag,n=struct.unpack('<II',head)
-        if tag!=0x80134000 or n!=20424:raise ValueError('Pristine native sky bank extent')
-        sky=head+f.read(n)
-    if sha(sky)!='5ca71209a935c1db0b2253674dcd83332679c213bf50299125e8d8a2cf846cd5':raise ValueError('Original MW sky bank fingerprint')
-    if not target_ingamea and sha(original)!='f65f05ef2ccea60a284af6c26923e55a95161f9ace7390dbbf237b964950b51d':raise ValueError('Original MW InGameA identity')
+def find_sky(original_stream):
+    with original_stream.open('rb') as f, mmap.mmap(f.fileno(),0,access=mmap.ACCESS_READ) as data:
+        for tag,offset,start,end in chunks(data):
+            if tag!=0x80134000 or offset%128 or end-offset>1024*1024:
+                continue
+            for kind,_,a,b in chunks(data,start,end):
+                if kind!=0x80134010:
+                    continue
+                for leaf,_,begin,stop in chunks(data,a,b):
+                    key=aligned(begin,16)+16
+                    if leaf==0x134011 and key+4<=stop and word(data,key)==0xed85ba82:
+                        return data[offset:end]
+    raise ValueError('Could not extract the MW sky model from STREAML2RA.BUN.')
+
+
+def append_sky(original,original_stream):
+    sky=find_sky(original_stream)
     end=0
     while end<len(original):
         if end+8>len(original):raise ValueError('MW InGameA chunk header')

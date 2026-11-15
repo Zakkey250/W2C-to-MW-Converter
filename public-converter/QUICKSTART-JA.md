@@ -9,7 +9,7 @@
 ### 用意するもの
 
 - [W2C 2.0.0](https://nfsmods.xyz/mod/3041) を展開したフォルダー。
-- Need for Speed Most Wanted (2005) のゲームフォルダーと、NFSPatcherで作成した **EN-US 1.3 LAA** または検証済みの **Redux 3.04同梱版**の `speed.exe`。対応バイナリは画面で検査します。
+- Need for Speed Most Wanted (2005) のゲームフォルダーと、対応する **32ビット MW 1.3 LAA** の `speed.exe`。NFSPatcher製とRedux 3.04同梱版で確認した実行構造を検査します。
 - [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.2) の32ビット `dinput8.dll` と [DirectXランタイム](https://www.microsoft.com/en-us/download/details.aspx?id=8109)（`d3dx9_43.dll`）。確認済みの6.4.0・10.0.2のビルドは、検査画面にバージョンが表示されます。10.0.2は標準設定で動作確認済みです。
 - 出力先ドライブに 62 GiB 以上の空き。変換中は中間データを作り、処理後は自動で片付けます。
 
@@ -26,7 +26,7 @@ Redux 3.04は検証済みの同梱 `speed.exe` と `dinput8.dll` を使用でき
 
 パックをゲームフォルダーへ手動でコピーしただけでは、W2Cワールドは読み込まれません。すでにコピーした場合は、導入先を指定して「変換済みパックを配置」を押し、「コピー済みのパックを検出」で「はい」を選んでください。ファイルを照合し、再変換せずに配置します。
 
-ワールドマップとレーダーはW2C原本を使います。Carbonのゲームフォルダーを指定すると、照合できた原本から、W2C原本にない夜空・ヘッドライトの発光・窓の反射などのテクスチャを補います。Carbonがない場合も、W2CとMWの原本で変換できます。
+ワールドマップとレーダーはW2C原本を使います。Carbonのゲームフォルダーを指定すると、照合できた原本から、W2C原本にない夜空・ヘッドライトの発光・窓の反射などのテクスチャを補います。CarbonはOGVIが指定済みでも空欄のまま進めます。W2CとMWの原本だけで変換でき、MWやCarbonの資源は言語を問わず読み取れるものを使います。
 
 ### Carbonのパースートブレーカーを復元する
 

@@ -77,7 +77,7 @@ def normalize_breaker_blast(record, native):
     return [f'{name} {tag:08x}/{i}: MW {reference} blast radius {radius:g} -> {new_radius:g} m']
 
 
-def quarantine_original_gap(record, gaps):
+def quarantine_original_gap(record, gaps, cameras):
     result=copy.deepcopy(record)
     for tag, entry in result['entries'].items():
         if tag>>16!=0x656c: continue
@@ -85,6 +85,11 @@ def quarantine_original_gap(record, gaps):
         for i in range(struct.unpack_from('<I',raw)[0]):
             at=16+16*i; kind,size,relative,unused=struct.unpack_from('<4I',raw,at)
             data=raw[at+relative:at+relative+size]
+            if kind==0x66666dc8:
+                scene_key=struct.unpack_from('<I',data,8)[0]
+                scene=result['entries'][scene_key]['data'].split(b'\0',1)[0].decode('ascii')
+                if scene not in cameras:
+                    continue
             if kind==0x2554c48a and struct.unpack_from('<I',data,12)[0]==0x0a8471ec:
                 if set(record['names'])!={'metalgate_seq'} or size!=48:
                     raise ValueError('Known original gap appeared in a new owner/ABI')
@@ -115,7 +120,7 @@ def compile_sequence_assets(raw, native_track, source_rows, target_rows, plan, c
         if identity in seen: continue
         seen.add(identity)
         if any(renames[n][0] in native for n in r['names']): raise ValueError('Native engine collision')
-        record=quarantine_original_gap(r,gaps)
+        record=quarantine_original_gap(r,gaps,cameras)
         blast_changes=normalize_breaker_blast(record,native)
         data,changes=adapt_sequence(record,attrs,rename,True,cameras,{n:renames[n] for n in r['names']})
         body.extend(struct.pack('<II',0x3b811,len(data))+data)

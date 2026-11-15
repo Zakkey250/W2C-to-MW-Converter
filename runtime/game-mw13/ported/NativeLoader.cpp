@@ -133,15 +133,47 @@ static void LoadEnvironmentDynamics();
 static bool sourceCarbonPursuit=false;
 #endif
 static bool SupportedExe(){
+#ifdef W2C_PUBLIC_BUILD
+ // Mirror the converter's PE check. Labels and resources in other sections
+ // can vary by release. The native hooks require this code and data layout.
+ using namespace w2v2disk;
+ struct Section{const char* name;unsigned va,virtualSize,rawSize,flags;const char* sha;};
+ static constexpr Section expected[]={
+  {".text",0x1000,0x48E2A5,0x48F000,0x60000020,"f258b7f607d10109c577e63497041476935793b8211e5acfd3cb88ac66b24470"},
+  {".rdata",0x490000,0x5971D,0x5A000,0x40000040,"fb27d471178fed85c12d31ee6a5c8dd3e891868ed9c04f19c0fecdbbe660ddc1"},
+  {".data",0x4EA000,0xDCE10,0x24000,0xC0000040,"2f00dcd3c0321f2da51d2b09e23ace8c3491400dc5e78da635d15b8ad3daa190"},
+ };
+ wchar_t exe[MAX_PATH];
+ const DWORD length=GetModuleFileNameW(nullptr,exe,MAX_PATH);
+ if(!length||length>=MAX_PATH)return false;
+ try {
+  File file(exe);
+  auto dos=file.read(0,64,64);
+  const auto offset=r32(dos,60);
+  if(r16(dos,0)!=0x5a4d||offset<64||offset>MiB)return false;
+  auto pe=file.read(offset,248,248);
+  const auto count=r16(pe,6);
+  if(r32(pe,0)!=IMAGE_NT_SIGNATURE||r16(pe,4)!=IMAGE_FILE_MACHINE_I386||
+     count<3||count>96||r16(pe,20)!=224||(r16(pe,22)&0x2022)!=0x22||
+     r16(pe,24)!=0x10b||r32(pe,40)!=0x3c4040||r32(pe,52)!=0x400000||
+     r32(pe,56)!=0x1000||(r16(pe,94)&0x40))return false;
+  auto table=file.read(offset+248,count*40,96*40);
+  for(unsigned i=0;i<std::size(expected);++i){
+   const auto& s=expected[i];
+   const unsigned at=40*i;
+   char label[8]{};
+   memcpy(label,s.name,strlen(s.name));
+   if(memcmp(table.data()+at,label,sizeof(label))||r32(table,at+8)!=s.virtualSize||
+      r32(table,at+12)!=s.va||r32(table,at+16)!=s.rawSize||r32(table,at+36)!=s.flags)return false;
+   if(sha(file.read(r32(table,at+20),std::min(s.virtualSize,s.rawSize),5*MiB))!=s.sha)return false;
+  }
+  return true;
+ }catch(const std::exception&){return false;}
+#else
  struct Build{DWORD bytes;const char* sha256;};
  static constexpr Build builds[]={
   {6029312,"B248271BF8EAC8C9B283B8C95E3ADD672B713BF529B05F1780E58268493B9D06"},
-#ifdef W2C_PUBLIC_BUILD
-  // Redux 3.04 maps the same game code and data at the same addresses.
-  {5926912,"0C5675A08CD71FD6D31CA87E992A915054BD8B80D268BFF0561D7ECC2067E342"},
-#else
   {6029312,"80774C2E5D619B4F120B48D4462896FD504C263399D203A238769CFFDE1D253C"},
-#endif
  };
  wchar_t exe[MAX_PATH];
  const DWORD length=GetModuleFileNameW(nullptr,exe,MAX_PATH);
@@ -171,6 +203,7 @@ static bool SupportedExe(){
  for(const auto& build:builds)
   if(fileSize.QuadPart==build.bytes&&!strcmp(hex,build.sha256))return true;
  return false;
+#endif
  }
 #include "SourceLegacyDiscovery.h"
 static void PrepareShadowIndices(CpuSection& data){if(data.normals.size()==data.header.vertices)BuildShadowIndexBatches(data);}

@@ -21,8 +21,8 @@
 
 **必須**
 
-- Windows x64と **Need for Speed: Most Wanted（2005）PC版**。[NFSPatcher](https://github.com/KilLo445/NFSPatcher) で用意し、[4GB Patch](https://ntcore.com/4gb-patch/) を適用した **EN-US 1.3 LAA の `speed.exe`** が必要です。コンバーターはSHA-256で照合します。`speed.exe` の同梱やパッチ適用は行いません。
-- 検証済みの **Redux 3.04** 同梱 `speed.exe` にも対応します。同梱のローダーと描画資源を維持してください。導入先のワールド資源に改変がある場合は、別の未改造MWフォルダーを読み取り専用の参考元に指定してください。
+- Windows x64と **Need for Speed: Most Wanted（2005）PC版**。対応する **32ビット MW 1.3 LAA の `speed.exe`** が必要です。ASIが呼び出すコードとデータの配置を検査します。言語資源やファイル全体のハッシュが異なっていても、同じ実行構造であれば使えます。[NFSPatcher](https://github.com/KilLo445/NFSPatcher) と [4GB Patch](https://ntcore.com/4gb-patch/) で用意できます。
+- 検証済みの **Redux 3.04** 同梱 `speed.exe` にも対応します。同梱のローダーと描画資源を維持してください。導入先のワールド資源に改変がある場合は、別の未改造MWフォルダーを読み取り専用の参考元に指定してください。MWの原本資源は言語を問わず、必要なデータを読み取れるかで判定します。
 - [W2C 2.0.0](https://nfsmods.xyz/mod/3041) の未改変の原本一式。配布アーカイブを展開すれば使えます。Carbonへの事前導入は不要です。
 - [Ultimate ASI Loader 10.0.2](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.2) の **x86／Win32版 `dinput8.dll`**。`speed.exe` と同じフォルダーに置きます。照合済みの6.4.0も検出できます。コンバーターはローダーを置き換えません。
 - [Microsoft DirectX エンドユーザーランタイム（June 2010）](https://www.microsoft.com/en-us/download/details.aspx?id=8109) のWin32版 `d3dx9_43.dll`。中間ファイル作成のため、出力先ドライブに **62 GiB以上**の空き容量が必要です。
@@ -34,7 +34,7 @@
 
 **任意**
 
-- 対応する **Need for Speed: Carbon PC版** のゲームフォルダー。Carbon固有のブレーカー・カメラ・環境エフェクトを復元するには、[Attribulator 2.0](https://github.com/NFSTools/Attribulator/releases/tag/v2.0.0) に [OGVI 1.4](https://nfsmods.xyz/mod/5290) を重ねて展開し、そのツールフォルダーも指定します。
+- **Need for Speed: Carbon PC版** のゲームフォルダーは言語を問わず任意です。OGVIが指定済みでも、Carbonを空欄のまま基本変換できます。Carbon固有のブレーカー・カメラ・環境エフェクトを復元するには、[Attribulator 2.0](https://github.com/NFSTools/Attribulator/releases/tag/v2.0.0) に [OGVI 1.4](https://nfsmods.xyz/mod/5290) を重ねて展開し、そのツールフォルダーも指定します。専用カメラは、読み取り可能な `speed.exe`、`nfs.exe`、`nfsc.exe` から抽出します。抽出できない要素は完了画面に表示します。
 - [Unlimiter](https://github.com/nlgxzef/NFSMWUnlimiter/releases) と [Extra Options](https://github.com/ExOptsTeam/NFSMWExOpts/releases) は導入済みなら検出しますが、基本構成では不要で、設定も変更しません。Event Loader、Event Editor、Save Virtualizerも前提ではありません。Save Virtualizerとセーブのサイドカーは同梱していません。
 
 ## 導入と元に戻す方法

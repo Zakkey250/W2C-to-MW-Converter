@@ -12,7 +12,6 @@ from carbon_sequences import (
     adapt_original_prop_rows, compile_carbon_prop_payload, compile_carbon_pursuit_recipe,
     compile_carbon_sequences, join_carbon_pursuit_placements, original_prop_recipe,
 )
-from prepare_public_breaker_inputs import checked_inputs
 from public_world_effects import compile_emitters, prepare_carbon
 
 
@@ -40,11 +39,11 @@ TOOL_FILES = (
     "plugins/Attribulator.Plugins.ModScript/Attribulator.Plugins.ModScript.dll",
 )
 NATIVE_REFERENCES = {
-    "mw-stream-pristine": ("TRACKS/STREAML2RA.BUN", "15016611bcb7511d255c092321f87c659b101910c054aba8b750d722036c111a"),
-    "mw-master-pristine": ("TRACKS/L2RA.BUN", "b4da68460c9f642c76e2d603d3d50c6036f0c393bbdb11c7cb5ed690f7fd70d8"),
-    "mw-globalb-pristine": ("GLOBAL/GLOBALB.BUN", "05e8e612e3b1126d2bb889ebb003f283c160ce9251b3ce970e24d01e351b3ef7"),
-    "mw-ingamea-pristine": ("GLOBAL/InGameA.bun", "f65f05ef2ccea60a284af6c26923e55a95161f9ace7390dbbf237b964950b51d"),
-    "mw-ingameb-pristine": ("GLOBAL/InGameB.bun", "934bae4ee1a728af252d65dbabde896eac665103d152b60099b705f499fb0879"),
+    "mw-stream-pristine": "TRACKS/STREAML2RA.BUN",
+    "mw-master-pristine": "TRACKS/L2RA.BUN",
+    "mw-globalb-pristine": "GLOBAL/GLOBALB.BUN",
+    "mw-ingamea-pristine": "GLOBAL/InGameA.bun",
+    "mw-ingameb-pristine": "GLOBAL/InGameB.bun",
 }
 
 
@@ -64,9 +63,11 @@ def run(command, work):
 
 def native_references(mw, references):
     result = {}
-    for role, (name, expected) in NATIVE_REFERENCES.items():
-        path = references.get(name) or file_at(mw, name)
-        if not path.is_file() or file_digest(path).lower() != expected:
+    for role, name in NATIVE_REFERENCES.items():
+        path = references.get(name)
+        if path is None or not path.is_file():
+            path = file_at(mw, name)
+        if not path.is_file() or not path.stat().st_size:
             raise ValueError(f"パースートブレーカーの復元にはMW原本の {name} が必要です。")
         result[role] = path
     return result
@@ -206,7 +207,6 @@ def merge_vault(tool, w2c, carbon, mw, master, native_master, source, native, am
 
 
 def build_pursuit(work, source, master, stream, model_index, w2c, mw, references, carbon, tool, progress):
-    checked_inputs(carbon)
     paths = native_references(mw, references)
     work.mkdir()
     native = work / "mw-native"
@@ -235,6 +235,7 @@ def build_pursuit(work, source, master, stream, model_index, w2c, mw, references
         raise ValueError("Duplicate native pursuit placement.")
     summary = {"placements": len(restored), "sequences": sequence_report["sequenceAliases"],
                "cameras": len(sequence_report["cameras"]), "missingPlacements": geometry["props"]["unresolvedPlacements"],
+               "omittedCameras": sequence_report["omittedCameras"],
                "sourceAttributesRecovered": report["sourceAttributesRecovered"]}
     (work / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
     (work / "pursuit-report.json").write_text(json.dumps(

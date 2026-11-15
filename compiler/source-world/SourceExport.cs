@@ -55,11 +55,18 @@ static class SourceExport {
    var modelHashes=new Dictionary<uint,string>();var textureHashes=new Dictionary<uint,string>();var sourceRows=new List<object>();var invalid=new List<object>();var textureRefs=new HashSet<uint>();var modelRefs=new HashSet<uint>();var textureVariants=new List<object>();
    foreach(var input in config.RootElement.GetProperty("files").EnumerateArray()){
     var role=input.GetProperty("role").GetString()!;bool selected=input.TryGetProperty("import",out var explicitImport)?explicitImport.GetBoolean():role is "x360" or "global-globalb" or "global-ingamea" or "global-ingameb";if(!selected)continue;var path=input.GetProperty("path").GetString()!;string fileHash;using(var f=File.OpenRead(path))fileHash=Convert.ToHexString(SHA256.HashData(f)).ToLowerInvariant();sourceRows.Add(new{role,path,bytes=new FileInfo(path).Length,sha256=fileHash});Console.WriteLine(JsonSerializer.Serialize(new{phase="source-ir-import",role,path}));Console.Out.Flush();
-    var cm=new ChunkManager(GameDetector.Game.Carbon);cm.Read(path);
-    if (input.TryGetProperty("missingTextureFallbacks", out var fallbacks))
+    var optionalTextureBank=input.TryGetProperty("missingTextureFallbacks", out var fallbacks);
+    var cm=new ChunkManager(GameDetector.Game.Carbon);
+    try { cm.Read(path); }
+    catch (Exception e) when (optionalTextureBank && e is (IOException or ArgumentException or FormatException
+        or InvalidDataException or NotSupportedException or IndexOutOfRangeException or OverflowException))
     {
-     var remaining = fallbacks.EnumerateObject()
-      .ToDictionary(item => Convert.ToUInt32(item.Name, 16), item => item.Value.GetString());
+     Console.WriteLine(JsonSerializer.Serialize(new{phase="optional-carbon-bank-skipped",role,error=e.Message}));
+     continue;
+    }
+    if (optionalTextureBank)
+    {
+     var remaining = fallbacks.EnumerateObject().Select(item => Convert.ToUInt32(item.Name, 16)).ToHashSet();
      foreach (var existing in textureHashes.Keys)
       remaining.Remove(existing);
      foreach (var chunk in cm.Chunks)
@@ -68,13 +75,13 @@ static class SourceExport {
        continue;
       foreach (var texture in pack.Textures)
       {
-       if (!remaining.TryGetValue(texture.TexHash, out var expectedHash))
+       if (!remaining.Contains(texture.TexHash))
         continue;
        using var image = new MemoryStream();
        texture.GenerateImage(image);
        var data = image.ToArray();
        var hash = Sha(data);
-       if (hash != expectedHash)
+       if (data.Length <= 128 || !data.AsSpan(0,4).SequenceEqual("DDS "u8))
         continue;
        textureHashes.Add(texture.TexHash, hash);
        var origin = new { role, offset = chunk.Offset, chunk = chunk.Id.ToString("x8") };
@@ -82,8 +89,6 @@ static class SourceExport {
        remaining.Remove(texture.TexHash);
       }
      }
-     if (remaining.Count != 0)
-      throw new InvalidDataException("Carbon texture data did not match the supported bank: " + role);
      continue;
     }
     foreach(var c in cm.Chunks){

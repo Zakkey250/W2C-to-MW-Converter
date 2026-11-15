@@ -19,8 +19,8 @@ Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. Th
 
 **Required**
 
-- Windows x64 and a PC installation of **Need for Speed: Most Wanted (2005)**, with **EN-US 1.3 `speed.exe` prepared with [NFSPatcher](https://github.com/KilLo445/NFSPatcher) and the [4GB Patch](https://ntcore.com/4gb-patch/)** (Large Address Aware). The converter checks the executable's SHA-256. It does not supply or patch `speed.exe`.
-- The verified **Redux 3.04** `speed.exe` is also supported. Keep its bundled loader and graphics files. If the game you are installing into has altered world resources, select a separate clean Most Wanted folder as the read-only reference.
+- Windows x64 and a PC installation of **Need for Speed: Most Wanted (2005)**, with a compatible **32-bit MW 1.3 Large Address Aware `speed.exe`**. The converter checks the native code and data layout used by the ASI. Localized resources and the executable's overall hash can differ. [NFSPatcher](https://github.com/KilLo445/NFSPatcher) and the [4GB Patch](https://ntcore.com/4gb-patch/) can prepare a compatible executable.
+- The verified **Redux 3.04** `speed.exe` is also supported. Keep its bundled loader and graphics files. If the game you are installing into has altered world resources, select a separate clean Most Wanted folder as the read-only reference. MW source banks are accepted by their structure and extractable resources, regardless of language.
 - The extracted, unmodified [W2C (World to Carbon) 2.0.0](https://nfsmods.xyz/mod/3041) archive. You can use the extracted source directly; you do not have to install W2C into Carbon first.
 - [Ultimate ASI Loader 10.0.2](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.2), **x86/Win32 `dinput8.dll`**, next to `speed.exe`. The converter also recognizes the verified 6.4.0 build. It does not replace the loader.
 - [Microsoft DirectX End-User Runtimes (June 2010)](https://www.microsoft.com/en-us/download/details.aspx?id=8109) with the Win32 `d3dx9_43.dll`, and at least **62 GiB free** on the output drive for temporary conversion files.
@@ -32,7 +32,7 @@ Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. Th
 
 **Optional**
 
-- A compatible PC installation of **Need for Speed: Carbon**. For Carbon-specific breakers, cameras and effects, extract [OGVI 1.4](https://nfsmods.xyz/mod/5290) over [Attribulator 2.0](https://github.com/NFSTools/Attribulator/releases/tag/v2.0.0) and select that tool folder in the converter.
+- A PC installation of **Need for Speed: Carbon**, in any language. Leave Carbon and OGVI blank for a base conversion. If OGVI is already selected, Carbon can still be left blank. For Carbon-specific breakers, cameras and effects, extract [OGVI 1.4](https://nfsmods.xyz/mod/5290) over [Attribulator 2.0](https://github.com/NFSTools/Attribulator/releases/tag/v2.0.0) and select that tool folder in the converter. The camera extractor can read a compatible `speed.exe`, `nfs.exe`, or `nfsc.exe`. Resources that cannot be extracted are listed on completion.
 - [Unlimiter](https://github.com/nlgxzef/NFSMWUnlimiter/releases) and [Extra Options](https://github.com/ExOptsTeam/NFSMWExOpts/releases) are detected if installed. The base conversion does not require them or change their settings. Event Loader, Event Editor and Save Virtualizer are not prerequisites. Save Virtualizer and its save sidecars are not included.
 
 ## Install and remove

@@ -12,15 +12,10 @@ import struct
 
 
 CHUNKS = (
-    ("sequences", "GLOBAL/GLOBALB.BUN", 11218440, 0x8003B810, 197120,
-     "dd123336c5cf0ae68e56c0c883603158263c0399b2c0cc35e25ec1488854edd1"),
-    ("cameras-ingameb", "GLOBAL/InGameB.bun", 637280, 0x8003B200, 269616,
-     "ff1892bbb04a3301e9b12141c02643befa1fe769b1a2e9128f7f04ad250ef89e"),
-    ("cameras-ingamec", "GLOBAL/InGameC.bun", 708928, 0x8003B200, 99452,
-     "ecfc4918020ae682dccdd9b2fcd72757edd5d17e543a15828052cb2e58393e61"),
+    ("sequences", "GLOBAL/GLOBALB.BUN", 0x8003B810),
+    ("cameras-ingameb", "GLOBAL/InGameB.bun", 0x8003B200),
+    ("cameras-ingamec", "GLOBAL/InGameC.bun", 0x8003B200),
 )
-DECODER_BYTES = 7217152
-DECODER_SHA256 = "590239474994375c56c4675839ed8ed23bae76e3c0aad2d5ccdb8ec1883b2ac7"
 
 
 def input_file(root, name):
@@ -30,31 +25,52 @@ def input_file(root, name):
     return path
 
 
-def checked_inputs(root):
-    decoder = input_file(root, "speed.exe")
-    if decoder.stat().st_size != DECODER_BYTES:
-        raise ValueError("Unsupported Carbon decoder executable size.")
-    with decoder.open("rb") as f:
-        if hashlib.file_digest(f, "sha256").hexdigest() != DECODER_SHA256:
-            raise ValueError("Unsupported Carbon decoder executable fingerprint.")
+def bank_chunks(path, kind):
+    size = path.stat().st_size
+    if not 0 < size <= 64 * 1024**2:
+        raise ValueError("Unexpected Carbon bank extent.")
+    with path.open("rb") as stream:
+        while stream.tell() < size:
+            offset = stream.tell()
+            header = stream.read(8)
+            if len(header) != 8:
+                raise ValueError("Truncated Carbon bank header.")
+            tag, length = struct.unpack("<II", header)
+            if length > size - stream.tell():
+                raise ValueError("Carbon chunk exceeds its bank.")
+            if kind == tag and length:
+                if length > 8 * 1024**2:
+                    raise ValueError("Unexpected Carbon chunk extent.")
+                data = stream.read(length)
+                if len(data) != length:
+                    raise ValueError("Truncated Carbon chunk.")
+                yield offset, data
+            else:
+                stream.seek(length, 1)
 
+
+def checked_inputs(root):
     extracted = {}
     records = []
-    for role, name, offset, kind, size, digest in CHUNKS:
-        path = input_file(root, name)
-        with path.open("rb") as f:
-            f.seek(offset)
-            header = f.read(8)
-            if header != struct.pack("<II", kind, size):
-                raise ValueError(f"Unsupported Carbon chunk location or size: {name} ({role})")
-            payload = f.read(size)
-        if len(payload) != size or hashlib.sha256(payload).hexdigest() != digest:
-            raise ValueError(f"Carbon chunk fingerprint differs: {name} ({role})")
-        extracted[role + ".bun"] = header + payload
-        records.append({"role": role, "source": name, "offset": offset, "chunk": f"{kind:08x}",
-                        "bytes": size, "payloadSha256": digest})
-    report = {"decoder": {"path": "speed.exe", "bytes": DECODER_BYTES, "sha256": DECODER_SHA256},
-              "verifiedChunks": records, "publicRuntimeInstalled": False}
+    for role, name, kind in CHUNKS:
+        try:
+            banks = list(bank_chunks(input_file(root, name), kind))
+        except (FileNotFoundError, ValueError):
+            if role == "sequences":
+                raise
+            continue
+        if not banks and role == "sequences":
+            raise ValueError(f"Could not extract Carbon pursuit sequences from {name}.")
+        output = bytearray()
+        for offset, payload in banks:
+            output.extend(struct.pack("<II", kind, len(payload)))
+            output.extend(payload)
+            records.append({"role": role, "source": name, "offset": offset, "chunk": f"{kind:08x}",
+                            "bytes": len(payload), "payloadSha256": hashlib.sha256(payload).hexdigest()})
+        if output:
+            extracted[role + ".bun"] = bytes(output)
+    decoders = [name for name in ("speed.exe", "nfs.exe", "nfsc.exe") if (root / name).is_file()]
+    report = {"decoderCandidates": decoders, "verifiedChunks": records, "publicRuntimeInstalled": False}
     return extracted, report
 
 

@@ -21,7 +21,7 @@ from preflight import (
     check_target, checked_folder, file_digest, has_sunset_pack, runtime_rows, sunset_resource_valid,
     sunset_config, sunset_row, texwizard_settings,
 )
-from package_layout import CORE, RULES, STREAM, target_core
+from package_layout import CORE, RULES, STREAM, stream_digest, target_core
 
 
 CONTROL = "W2CMWPublic"
@@ -42,6 +42,8 @@ MIN_FREE_BYTES = 50 * 1024**3
 # These previews use the same verified world format. Install the converter's
 # current ASI after validating the selected package's own manifest and assets.
 UPGRADEABLE_PREVIEWS = {
+    "76bb735bced9afdc46099a0d4aaa7adbb3cfe222f1511b8dbafcac28168a5220",
+    "f76d7f02a63b14f989a1ddae89fcda5a03bcf72b24bda48fde4c20f3c2259b89",
     "cd8af723b1e266edf612d26064dcb13c230c6a33319df61db91e1a987af698d8",
     "b8cd1845237a56e0e9d97a1d7b41eafac1a47563e995caf1e44ff93d52bc108a",
     "ee18686aec1e035d62124927de08344eb59ac526a0a6a94c6909e87df42e8e1b",
@@ -145,6 +147,8 @@ def checked_package(package, *, in_game=False):
         manifest["targetCore"] = (
             target_core(json.loads(reader.read(61, "native/mw-target-core")))
             if reader.contains(61, "native/mw-target-core") else RULES["mwInputs"])
+        manifest["streamSha256"] = (stream_digest(json.loads(reader.read(61, "native/mw-reference-stream")))
+                                    if reader.contains(61, "native/mw-reference-stream") else RULES["mwInputs"][STREAM])
         if reader.read(61, "native/original-map-textures") != under(package, "Native/original-map-textures.bin").read_bytes():
             raise ValueError("Generated radar resource differs from its world.")
         if (not reader.read(61, "native/mw-tolls").startswith(b"W2TOLL1\0")
@@ -467,6 +471,8 @@ def installed_world(mw):
         raise ValueError("Unrecognized installation state.")
     if "targetCore" in state:
         target_core(state["targetCore"])
+    if "streamSha256" in state:
+        stream_digest(state["streamSha256"])
     return state
 
 
@@ -480,7 +486,8 @@ def uninstall(mw):
             return False
         changes = {}
         baseline = state.get("targetCore", RULES["mwInputs"])
-        stream_swapped = baseline[STREAM] != RULES["mwInputs"][STREAM]
+        installed_stream = state.get("streamSha256", RULES["mwInputs"][STREAM])
+        stream_swapped = baseline[STREAM] != installed_stream
         for name in (*CORE, *((STREAM,) if stream_swapped else ())):
             original = under(mw, f"{CONTROL}/originals/{name}")
             original_sha = baseline[name]
@@ -488,7 +495,7 @@ def uninstall(mw):
                 raise ValueError(f"復元用の原本が見つからないか、内容が異なります。{name}")
             current = under(mw, name)
             generation = under(mw, f"{CONTROL}/generations/{state['generation']}/Core/{name}")
-            installed_sha = RULES["mwInputs"][STREAM] if name == STREAM else sha(generation)
+            installed_sha = installed_stream if name == STREAM else sha(generation)
             current_sha = sha(current)
             if current_sha != original_sha and (installed_sha is None or current_sha != installed_sha):
                 raise ValueError(f"配置後にファイルが変更されたため、復元を中止しました。{name}")
@@ -514,7 +521,7 @@ def install(package, mw, *, language=None, mw_reference=None):
     in_game = package == mw
     package_info = checked_package(package, in_game=in_game)
     base_core = package_info["targetCore"]
-    stream_swapped = base_core[STREAM] != RULES["mwInputs"][STREAM]
+    installed_stream = package_info["streamSha256"]
     stream_source = None
     baseline = None
     if any(row["path"] == PROP_TEXTURES for row in package_info["files"]):
@@ -557,10 +564,14 @@ def install(package, mw, *, language=None, mw_reference=None):
         stream_path = under(mw, STREAM)
         if previous is not None and previous.get("targetCore", RULES["mwInputs"]) != base_core:
             raise ValueError("導入前のMW資源が変換時と異なります。再変換してください。")
-        if sha(stream_path) != (base_core[STREAM] if previous is None else RULES["mwInputs"][STREAM]):
+        previous_stream = previous.get("streamSha256", RULES["mwInputs"][STREAM]) if previous else base_core[STREAM]
+        if sha(stream_path) != previous_stream:
             raise ValueError(f"Target MW resource has changed: {STREAM}")
-        if stream_swapped and previous is None:
+        if installed_stream != previous_stream:
             stream_source = mw_inputs(mw, mw_reference)[STREAM]
+            if sha(stream_source) != installed_stream:
+                raise ValueError(f"Select the same MW reference used for conversion: {STREAM}")
+        stream_swapped = installed_stream != base_core[STREAM] or previous_stream != base_core[STREAM]
         protected_core = (*CORE, *((STREAM,) if stream_swapped else ()))
         verify_vault()
         for name in protected_core:
@@ -568,13 +579,14 @@ def install(package, mw, *, language=None, mw_reference=None):
             expected = base_core[name]
             if previous is not None:
                 current = under(mw, f"{CONTROL}/generations/{previous['generation']}/Core/{name}")
-                expected = RULES["mwInputs"][STREAM] if name == STREAM else sha(current)
+                expected = previous_stream if name == STREAM else sha(current)
             if expected is None or sha(path) != expected:
                 raise ValueError(f"Target MW resource has changed: {name}")
             backup = under(mw, f"{CONTROL}/originals/{name}")
-            if previous is not None or backup.exists():
-                if sha(backup) != base_core[name]:
-                    raise ValueError(f"Original MW backup fingerprint differs: {name}")
+            backup_required = backup.exists() or (previous is not None
+                                                   and (name in CORE or previous_stream != base_core[STREAM]))
+            if backup_required and sha(backup) != base_core[name]:
+                raise ValueError(f"Original MW backup fingerprint differs: {name}")
         new_generation_bytes = sum(row["bytes"] for row in package_info["files"])
         stage_budget = 64 * 1024**2 + 3 * sum(under(mw, name).stat().st_size for name in protected_core)
         generation_index = under(mw, f"{CONTROL}/generations/{package_info['buildId']}/World/L5RA.w2i")
@@ -583,7 +595,7 @@ def install(package, mw, *, language=None, mw_reference=None):
         for name in protected_core:
             path = under(mw, name)
             original = under(mw, f"{CONTROL}/originals/{name}")
-            if previous is None and not original.exists():
+            if not original.exists():
                 replace_file(original, path, expected_sha=base_core[name])
 
         staged = copy_generation(mw, package, package_info)
@@ -593,6 +605,8 @@ def install(package, mw, *, language=None, mw_reference=None):
             "runtimeSha256": runtime_sha,
             "targetCore": base_core,
         }
+        if installed_stream != RULES["mwInputs"][STREAM]:
+            installation["streamSha256"] = installed_stream
         if language is not None:
             installation["language"] = language
         changes = {name: staged / "Core" / name for name in CORE}
@@ -620,7 +634,7 @@ def install(package, mw, *, language=None, mw_reference=None):
             if name == MANIFEST:
                 if sha(existing_asi) != runtime_sha:
                     raise ValueError("Runtime ASI changed during placement.")
-                if sha(stream_path) != RULES["mwInputs"][STREAM]:
+                if sha(stream_path) != installed_stream:
                     raise ValueError("MW stream fingerprint changed during placement.")
                 verify_vault()
 

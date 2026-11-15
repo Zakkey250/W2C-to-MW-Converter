@@ -13,8 +13,18 @@ from audit_breaker_sequences import chunks
 
 
 def evaluate(executable, ingame, scene, phases=None):
-    pe = pefile.PE(str(executable))
-    image = pe.get_memory_mapped_image()
+    if executable is None or not 0 < executable.stat().st_size <= 32 * 1024**2:
+        raise ValueError("Carbon camera curve decoder executable missing or unreadable.")
+    pe = pefile.PE(str(executable), fast_load=True)
+    if (pe.FILE_HEADER.Machine != 0x14c or pe.OPTIONAL_HEADER.Magic != 0x10b
+            or pe.OPTIONAL_HEADER.ImageBase != 0x400000
+            or not 0x660000 <= pe.OPTIONAL_HEADER.SizeOfImage <= 32 * 1024**2):
+        raise ValueError("Carbon camera curve decoder image layout is unsupported.")
+    for address in (0x489e50, 0x497b00, 0x48a4b0, 0x493da0):
+        section = pe.get_section_by_rva(address - 0x400000)
+        if section is None or not section.Characteristics & 0x20000000:
+            raise ValueError("Carbon camera curve code is absent.")
+    image = pe.get_memory_mapped_image(max_virtual_address=32 * 1024**2)
     machine = Uc(UC_ARCH_X86, UC_MODE_32)
     machine.mem_map(0x400000, (len(image) + 4095) & ~4095)
     machine.mem_write(0x400000, image)
