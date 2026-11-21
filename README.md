@@ -1,10 +1,12 @@
-# W2C to MW 2.0.0 — Converter RC5
+# W2C to MW 2.0.0 — Converter RC6
 
 [日本語](README.ja.md)
 
+See [RC6 changes and optional components](CHANGELOG-RC6-EN.md). Rebuild from your W2C 2.0.0 source to include all RC6 fixes.
+
 Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. This Windows x64 tool converts the original [W2C (World to Carbon) 2.0.0](https://nfsmods.xyz/mod/3041) files on your PC and can install the resulting world in a separate Most Wanted game folder.
 
-[Converter RC5](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc5) · [RC4 to RC5 Patch](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch)
+[Converter RC6](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc6)
 
 > **Do not redistribute conversion output.** Generate your own pack from the original files. See [Redistribution](#redistribution) below.
 
@@ -22,7 +24,7 @@ Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. Th
 - Windows x64 and a PC installation of **Need for Speed: Most Wanted (2005)**, with a compatible **32-bit MW 1.3 Large Address Aware `speed.exe`**. The converter checks the native code and data layout used by the ASI. Localized resources and the executable's overall hash can differ. [NFSPatcher](https://github.com/KilLo445/NFSPatcher) and the [4GB Patch](https://ntcore.com/4gb-patch/) can prepare a compatible executable.
 - The verified **Redux 3.04** `speed.exe` is also supported. Keep its bundled loader and graphics files. If the game you are installing into has altered world resources, select a separate clean Most Wanted folder as the read-only reference. MW source banks are accepted by their structure and extractable resources, regardless of language.
 - The extracted, unmodified [W2C (World to Carbon) 2.0.0](https://nfsmods.xyz/mod/3041) archive. You can use the extracted source directly; you do not have to install W2C into Carbon first.
-- [Ultimate ASI Loader 10.0.2](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.2), **x86/Win32 `dinput8.dll`**, next to `speed.exe`. The converter also recognizes the verified 6.4.0 build. It does not replace the loader.
+- [Ultimate ASI Loader 10.0.4](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.4), **x86/Win32 `dinput8.dll`**, next to `speed.exe`. The converter also recognizes the verified 6.4.0 and 10.0.2 builds. It does not replace the loader.
 - [Microsoft DirectX End-User Runtimes (June 2010)](https://www.microsoft.com/en-us/download/details.aspx?id=8109) with the Win32 `d3dx9_43.dll`, and at least **62 GiB free** on the output drive for temporary conversion files.
 
 **Recommended for graphics**
@@ -37,11 +39,11 @@ Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. Th
 
 ## Install and remove
 
-If you already installed the public RC4, use the separate RC4 to RC5 Patch to update that game folder. If the patch fails, use Converter RC5 to rebuild from the original W2C 2.0.0 files.
+To update RC5 or earlier to RC6, rebuild from the original W2C 2.0.0 files with this converter. The first installation's original-world backups are retained. The older RC4 to RC5 patch does not install RC6.
 
 1. Close the game and its launcher. Back up your saves and use a separate Most Wanted game folder without another world loader.
 2. In **Releases → Assets**, download the Windows x64 converter ZIP. Extract it fully, keep `_internal` beside `W2C-to-MW-Converter.exe`, and open the EXE.
-3. Select the W2C source, the Most Wanted folder and a quality. Add the optional inputs you want to use and complete the game folder checks.
+3. Select the W2C source, the Most Wanted folder and a quality. Add the optional inputs you want to use and complete the game folder checks. On the review screen, choose whether to install the provisional-road Addon and LBx64 RC3.1. Unselected components remain in `Optional` with their guides.
 4. Choose a new output folder and convert. Select automatic installation or use **Install an existing pack** later. Copying an output pack into the game folder by itself does not activate it. After installation, launch that folder's `speed.exe`.
    - At the first conversion, accept the one-time importer setup. The converter verifies and downloads the pinned upstream source and a temporary .NET SDK if needed, then builds the importer locally. Internet access is needed for setup; Python and Visual Studio are not required. [Build instructions](BUILD.md)
 5. To restore the previous world, close the game and confirm in `W2CMWPublic/W2CMW-Rollback.exe` inside the game folder. Rollback keeps your saves, converted packs, SunSet and TexWizard.

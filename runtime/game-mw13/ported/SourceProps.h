@@ -23,9 +23,17 @@ static bool LoadSourcePropCatalog(){try{
 #endif
  auto input=SourceInput(61,"native/prop-placements");need(input.get<unsigned>()==0x31504d57,"source prop catalog magic");auto n=input.get<unsigned>();need(n>0&&n<=100000&&input.remaining()==U(n)*64,"source prop catalog count/size");
  nextId=n;
+#ifdef W2C_PUBLIC_BUILD
+ std::array<BYTE,64> cushionTemplate{};
+ bool foundCushionTemplate=false;
+#endif
  for(unsigned i=0;i<n;++i){
   auto p=std::make_unique<NativeProp>();p->id=i;input.read(p->record,64);
 #ifdef W2C_PUBLIC_BUILD
+  if(!rockportCushions.placements.empty()&&i==rockportCushions.templateId){
+   memcpy(cushionTemplate.data(),p->record,cushionTemplate.size());
+   foundCushionTemplate=true;
+  }
   if(worldClosureAddon.props.count(i))continue;
 #endif
   for(unsigned j=0;j<3;++j){float x;memcpy(&x,p->record+16+j*4,4);need(std::isfinite(x),"source prop position");}
@@ -34,6 +42,25 @@ static bool LoadSourcePropCatalog(){try{
   staged.push_back(std::move(p));
  }input.end();
 #ifdef W2C_PUBLIC_BUILD
+ if(!rockportCushions.placements.empty()){
+  const auto asset=r32(B(cushionTemplate.begin(),cushionTemplate.end()),32);
+  const auto tree=propHierarchies.find(asset);
+  if(foundCushionTemplate&&sha(B(cushionTemplate.begin(),cushionTemplate.end()))==rockportCushions.templateSha&&
+     tree!=propHierarchies.end()&&r32(tree->second,4)>1&&propPursuitParameters.count(asset)){
+   auto& replaced=worldClosureAddon.draws[rockportCushions.section];
+   for(const auto& [draw,transform]:rockportCushions.placements){
+    auto prop=std::make_unique<NativeProp>();
+    prop->id=nextId++;
+    prop->rockportCushion=true;
+    memcpy(prop->record,cushionTemplate.data(),cushionTemplate.size());
+    memcpy(prop->record,transform.data(),transform.size()*sizeof(float));
+    staged.push_back(std::move(prop));
+    replaced.insert(draw);
+   }
+   if(worldLogEnabled)Log("ROCKPORT_CUSHIONS_ACTIVE first=%u count=%u asset=%08X",
+       n,unsigned(rockportCushions.placements.size()),asset);
+  }else if(worldLogEnabled)Log("ROCKPORT_CUSHIONS_REFUSED native model or template identity");
+ }
  }
 #endif
  auto appendPlacement=[&staged,&nextId](const std::array<BYTE,64>& record){
@@ -44,6 +71,18 @@ static bool LoadSourcePropCatalog(){try{
  for(const auto& record:source_mw_prop_fallback::placements)appendPlacement(record);
 #endif
  for(const auto& record:source_mw_tolls::placements)appendPlacement(record);
+#ifdef W2C_PUBLIC_BUILD
+ if(!authoredPropPlacements.empty()){
+  const auto bank=SourceBytes(61,"native/prop-placements");
+  for(const auto& row:authoredPropPlacements){
+   auto prop=std::make_unique<NativeProp>();prop->id=nextId++;prop->authored=true;
+   memcpy(prop->record,bank.data()+8+std::size_t(row.templateId)*64,64);memcpy(prop->record,row.transform.data(),32);
+   const auto asset=*reinterpret_cast<const unsigned*>(prop->record+32);
+   need(propHierarchies.count(asset)&&propPursuitParameters.count(asset),"Authored prop native dependency");staged.push_back(std::move(prop));
+  }
+  if(worldLogEnabled)Log("AUTHORED_PROPS_ACTIVE count=%u native_collision=1 native_motion=1",unsigned(authoredPropPlacements.size()));
+ }
+#endif
  nativeProps=std::move(staged);propCatalog=true;w2mw::propPolygonBridge=true;return true;
  }catch(const std::exception& error){Log("SOURCE_PROP_CATALOG_REFUSED reason=%s",error.what());++v2Failures;return false;}}
 static bool RegisterSourcePropConvex(){try{

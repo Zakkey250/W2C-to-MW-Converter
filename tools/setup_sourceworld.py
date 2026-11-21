@@ -19,6 +19,19 @@ SOURCE_ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = "https://codeload.github.com/NFSTools/NFS-ModTools/zip/"
 FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
+def importer_command():
+    """Use one locally built importer for both W2C and reference-game reads."""
+    if getattr(sys, "frozen", False):
+        built = Path(sys._MEIPASS) / "bin/SourceWorld.exe"
+        if built.is_file():
+            return [str(built)]
+    local = SOURCE_ROOT / "compiler/source-world/bin/Release/net11.0/SourceWorld.dll"
+    if not getattr(sys, "frozen", False) and local.is_file():
+        return ["dotnet", str(local)]
+    cache = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "W2C-to-MW/SourceWorld/RC6/SourceWorld.exe"
+    bundle = Path(sys._MEIPASS) / "importer-source" if getattr(sys, "frozen", False) else None
+    return [str(cache if cache.is_file() else build_importer(cache, bundle=bundle))]
+
 def prepare(workspace, lock_file, archives=None):
     lock = json.loads(lock_file.read_text(encoding="utf-8"))
     vendor = workspace / "compiler/source-world/vendor"

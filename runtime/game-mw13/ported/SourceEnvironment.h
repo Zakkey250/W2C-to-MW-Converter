@@ -10,7 +10,23 @@ static void LoadSourceEnvironment(){
 #endif
  Log("SOURCE_ENVIRONMENT lights=%u flares=%u pack_only=1",unsigned(envLights.size()),unsigned(envFlares.size()));
 }
+static bool TerrainContainsPanorama(unsigned id){
+ using namespace w2v2disk;
+ const auto* scene=v2Store.bundle().find(23,"scenes/"+std::to_string(id));
+ if(!scene||scene->bytes>4*MiB)return true;
+ const auto bytes=v2Store.bundle().read(*scene);
+ need(bytes.size()>=32&&!memcmp(bytes.data(),"W2SSCNE1",8),"terrain scene identity");
+ const auto infoCount=r32(bytes,20),instanceCount=r32(bytes,24);
+ need(32+U(infoCount)*72+U(instanceCount)*96==bytes.size(),"terrain scene extent");
+ for(unsigned i=0;i<infoCount;++i){
+  const auto* name=bytes.data()+32+U(i)*72;
+  if(!memcmp(name,"PAN_",4)||!memcmp(name,"PANO",4))return true;
+ }
+ return false;
+}
 static bool LoadSourceVisibility(){try{
  using namespace w2v2disk;auto bytes=SourceBytes(51,"environment/visibility");auto data=parse(bytes,4*MiB);need(data.is_array()&&data.size()<=10000,"source visibility count");std::vector<Zone> staged;
- for(const auto& row:data){Zone z;z.id=unsigned(uintv(row["section"],65535));auto polygon=row["polygon"];need(polygon.is_array()&&polygon.size()>=3&&polygon.size()<=128,"source visibility polygon");for(const auto& p:polygon){need(p.is_array()&&p.size()==2,"source visibility point");Vec3 point{float(number(p[0])),float(number(p[1])),0};need(std::isfinite(point.x)&&std::isfinite(point.y),"source visibility finite point");z.boundary.push_back(point);z.low.x=std::min(z.low.x,point.x);z.low.y=std::min(z.low.y,point.y);z.high.x=std::max(z.high.x,point.x);z.high.y=std::max(z.high.y,point.y);}auto visible=row["visible"];need(visible.is_array()&&visible.size()<=30000,"source visibility membership");for(const auto& v:visible)z.sections.insert(unsigned(uintv(v,65535)));staged.push_back(std::move(z));}zones=std::move(staged);return true;
+ for(const auto& row:data){Zone z;z.id=unsigned(uintv(row["section"],65535));auto polygon=row["polygon"];need(polygon.is_array()&&polygon.size()>=3&&polygon.size()<=128,"source visibility polygon");for(const auto& p:polygon){need(p.is_array()&&p.size()==2,"source visibility point");Vec3 point{float(number(p[0])),float(number(p[1])),0};need(std::isfinite(point.x)&&std::isfinite(point.y),"source visibility finite point");z.boundary.push_back(point);z.low.x=std::min(z.low.x,point.x);z.low.y=std::min(z.low.y,point.y);z.high.x=std::max(z.high.x,point.x);z.high.y=std::max(z.high.y,point.y);}auto visible=row["visible"];need(visible.is_array()&&visible.size()<=30000,"source visibility membership");for(const auto& v:visible)z.sections.insert(unsigned(uintv(v,65535)));staged.push_back(std::move(z));}for(const auto& [id,section]:sections)
+  if(TerrainContainsPanorama(id))terrainPanoramaSections.insert(id);
+ zones=std::move(staged);return true;
  }catch(const std::exception& error){Log("SOURCE_VISIBILITY_REFUSED reason=%s",error.what());return false;}}

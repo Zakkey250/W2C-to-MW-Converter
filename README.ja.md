@@ -1,12 +1,14 @@
-# W2C to MW 2.0.0 — Converter RC5
+# W2C to MW 2.0.0 — Converter RC6
 
 [English](README.md)
 
+[RC6の変更点と追加コンポーネント](CHANGELOG-RC6-JA.md)をご覧ください。すべての修正を反映するにはW2C 2.0.0の原本から再変換してください。
+
 **Need for Speed: Most Wanted（2005）で、ロックポートとパルモントを走ろう。** [W2C（World to Carbon）2.0.0](https://nfsmods.xyz/mod/3041) の原本から、Most Wanted用のワールドを自分のPCで変換するWindows x64向けツールです。変換済みパックの保存と、独立したMost Wanted環境への自動配置ができます。
 
-[コンバーター RC5](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc5) · [RC4→RC5パッチャー](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch)
+[コンバーター RC6](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc6)
 
-公開版RC4を導入済みの場合は、専用パッチャーで更新できます。適用に失敗する場合は、コンバーターRC5でW2C 2.0.0の原本から再構築してください。
+RC5以前からRC6へ更新する場合は、このコンバーターでW2C 2.0.0の原本から再構築してください。初回導入前のワールド資源は復元用に保持します。旧RC4→RC5パッチャーではRC6へ更新できません。
 
 > **変換生成物は再配布厳禁です。** 各自で原本から変換してください。詳しくは下記の「再配布について」をご覧ください。
 
@@ -24,7 +26,7 @@
 - Windows x64と **Need for Speed: Most Wanted（2005）PC版**。対応する **32ビット MW 1.3 LAA の `speed.exe`** が必要です。ASIが呼び出すコードとデータの配置を検査します。言語資源やファイル全体のハッシュが異なっていても、同じ実行構造であれば使えます。[NFSPatcher](https://github.com/KilLo445/NFSPatcher) と [4GB Patch](https://ntcore.com/4gb-patch/) で用意できます。
 - 検証済みの **Redux 3.04** 同梱 `speed.exe` にも対応します。同梱のローダーと描画資源を維持してください。導入先のワールド資源に改変がある場合は、別の未改造MWフォルダーを読み取り専用の参考元に指定してください。MWの原本資源は言語を問わず、必要なデータを読み取れるかで判定します。
 - [W2C 2.0.0](https://nfsmods.xyz/mod/3041) の未改変の原本一式。配布アーカイブを展開すれば使えます。Carbonへの事前導入は不要です。
-- [Ultimate ASI Loader 10.0.2](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.2) の **x86／Win32版 `dinput8.dll`**。`speed.exe` と同じフォルダーに置きます。照合済みの6.4.0も検出できます。コンバーターはローダーを置き換えません。
+- [Ultimate ASI Loader 10.0.4](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.4) の **x86／Win32版 `dinput8.dll`**。`speed.exe` と同じフォルダーに置きます。照合済みの6.4.0・10.0.2も検出できます。コンバーターはローダーを置き換えません。
 - [Microsoft DirectX エンドユーザーランタイム（June 2010）](https://www.microsoft.com/en-us/download/details.aspx?id=8109) のWin32版 `d3dx9_43.dll`。中間ファイル作成のため、出力先ドライブに **62 GiB以上**の空き容量が必要です。
 
 **描画の推奨構成**

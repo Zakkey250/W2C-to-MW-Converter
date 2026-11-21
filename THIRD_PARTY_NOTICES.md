@@ -5,3 +5,4 @@
 - The release package includes a .NET x86 runtime in the converter's PublicVault helper. At conversion time the optional Carbon path uses the user's OGVI/Attribulator assemblies. Neither tool's binaries are shipped in this distribution.
 - SourceWorld uses pinned NFS-ModTools/CompLib source only during the user-initiated local build. There is no prebuilt copy or upstream source copy in this release.
 - Game files, W2C, Carbon, SunSet, TexWizard, Ultimate ASI Loader, and conversion output are obtained separately. The converter includes its own setup preset and compact road coverage reference. See the README for credits and links.
+- The optional LBx64 W2CtoMW RC3.1 archive is included unchanged. It contains the LBx64 runtime and rendering components, including NVIDIA DLSS and the dgVoodoo rendering provider. See `optional/README-LBx64.txt` for requirements and the supported executable identities. Installing this component is optional.

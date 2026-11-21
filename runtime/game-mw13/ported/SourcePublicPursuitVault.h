@@ -142,18 +142,16 @@ static bool InstallSourcePublicPursuitVault(){
    need(bundle.find(61,std::string("native/")+entry)!=nullptr,"public pursuit asset closure");
   const auto baseline=parse(bundle.read(*contract),4096);
   need(baseline.is_object()&&baseline.size()==4,"public pursuit vault baseline");
-  for(const char* file:{"attributes.bin","fe_attrib.bin","gameplay.bin","gameplay.lzc"}){
-   const std::string name=file;
-   const auto expected=str(baseline.at(name),64);
-   File original(std::filesystem::path(root)/"GLOBAL"/name);
-   need(IsPublicDigest(expected)&&original.fullHash()==expected,"MW vault changed after pursuit conversion");
-   if(name!="attributes.bin")continue;
-   const auto entry=bundle.find(62,"native-vault/"+name);
-   need(entry&&entry->bytes>0&&entry->bytes<=16*MiB,"public pursuit vault entry");
-   auto merged=bundle.read(*entry);
-   need(merged.size()==entry->bytes&&sha(merged)==entry->sha,"public pursuit vault integrity");
-   public_pursuit_overlay::Prepare(original.read(0,original.size,16*MiB),std::move(merged));
-  }
+  // Only attributes.bin is loaded by the additive overlay. The other
+  // fingerprints record the conversion inputs and do not gate world startup.
+  const auto expected=str(baseline.at("attributes.bin"),64);
+  File original(std::filesystem::path(root)/"GLOBAL"/"attributes.bin");
+  need(IsPublicDigest(expected)&&original.fullHash()==expected,"MW attributes.bin changed after pursuit conversion");
+  const auto entry=bundle.find(62,"native-vault/attributes.bin");
+  need(entry&&entry->bytes>0&&entry->bytes<=16*MiB,"public pursuit vault entry");
+  auto merged=bundle.read(*entry);
+  need(merged.size()==entry->bytes&&sha(merged)==entry->sha,"public pursuit vault integrity");
+  public_pursuit_overlay::Prepare(original.read(0,original.size,16*MiB),std::move(merged));
   sourceCarbonPursuit=true;
   Log("PUBLIC_PURSUIT_OVERLAY_PREPARED entries=%u base_already_loaded=%u",
       unsigned(public_pursuit_overlay::additions.size()),

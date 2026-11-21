@@ -235,7 +235,11 @@
     "Redux 3.04と一致。": "Matcher den eksekverbare fil i Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Den medfølgende 32-bit dinput8.dll fra {0} er verificeret.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Gendan grafikfilerne fra Redux 3.04. Manglende filer kan gøre 3D-visningen sort.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Grafikfilerne fra Redux 3.04 er fundet."
+    "Redux 3.04の同梱描画資源を確認しました。": "Grafikfilerne fra Redux 3.04 er fundet.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Installer Addon — Foreløbig adgang til uåbnede W2C-veje",
+    "LBx64 RC3.1をインストール": "Installer LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Fravalgte komponenter gemmes også i Optional med installationsvejledninger.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Ved installation af LBx64 sikkerhedskopieres og erstattes den gamle LB. DLSS og DLAA kræver et kompatibelt NVIDIA-system og SunSet."
   },
   "nl": {
     "W2C to MW のアンインストール": "ontgrendelen W2C to MW",
@@ -473,7 +477,11 @@
     "Redux 3.04と一致。": "Komt overeen met het uitvoerbare bestand van Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "De meegeleverde 32-bits dinput8.dll van {0} is geverifieerd.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Herstel de grafische bestanden uit Redux 3.04. Bij ontbrekende bestanden kan de 3D-weergave zwart worden.",
-    "Redux 3.04の同梱描画資源を確認しました。": "De grafische bestanden uit Redux 3.04 zijn gevonden."
+    "Redux 3.04の同梱描画資源を確認しました。": "De grafische bestanden uit Redux 3.04 zijn gevonden.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Addon installeren — Voorlopige toegang tot ongeopende W2C-wegen",
+    "LBx64 RC3.1をインストール": "LBx64 RC3.1 installeren",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Niet-geselecteerde onderdelen worden ook met installatiehandleidingen in Optional opgeslagen.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Bij installatie van LBx64 wordt de oude LB geback-upt en vervangen. DLSS en DLAA vereisen een compatibel NVIDIA-systeem en SunSet."
   },
   "fi": {
     "W2C to MW のアンインストール": "Poistaa W2C to MW",
@@ -711,7 +719,11 @@
     "Redux 3.04と一致。": "Vastaa Redux 3.04:n mukana toimitettua suoritustiedostoa.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Version {0} mukana toimitettu 32-bittinen dinput8.dll on tarkistettu.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Palauta Redux 3.04:n mukana toimitetut grafiikkatiedostot. Puuttuvat tiedostot voivat pimentää 3D-näkymän.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Redux 3.04:n grafiikkatiedostot löytyivät."
+    "Redux 3.04の同梱描画資源を確認しました。": "Redux 3.04:n grafiikkatiedostot löytyivät.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Asenna Addon — W2C:n suljettujen teiden väliaikainen avaaminen",
+    "LBx64 RC3.1をインストール": "Asenna LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Valitsemattomat osat tallennetaan myös Optional-kansioon asennusohjeineen.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "LBx64:n asennus varmuuskopioi ja korvaa vanhan LB:n. DLSS ja DLAA edellyttävät yhteensopivaa NVIDIA-järjestelmää ja SunSetiä."
   },
   "fr": {
     "W2C to MW のアンインストール": "Désinstaller W2C to MW",
@@ -949,7 +961,11 @@
     "Redux 3.04と一致。": "Correspond à l’exécutable fourni avec Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Le fichier dinput8.dll 32 bits fourni avec {0} a été vérifié.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Restaurez les fichiers graphiques fournis avec Redux 3.04. Des fichiers manquants peuvent rendre la vue 3D noire.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Les fichiers graphiques de Redux 3.04 ont été détectés."
+    "Redux 3.04の同梱描画資源を確認しました。": "Les fichiers graphiques de Redux 3.04 ont été détectés.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Installer Addon — Ouverture provisoire des routes W2C fermées",
+    "LBx64 RC3.1をインストール": "Installer LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Les composants non sélectionnés sont également enregistrés dans Optional avec leurs guides d’installation.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "L’installation de LBx64 sauvegarde et remplace l’ancien LB. DLSS et DLAA nécessitent un système NVIDIA compatible et SunSet."
   },
   "de": {
     "W2C to MW のアンインストール": "Entfernen W2C to MW",
@@ -1187,7 +1203,11 @@
     "Redux 3.04と一致。": "Entspricht der mit Redux 3.04 gelieferten Programmdatei.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Die mit {0} gelieferte 32-Bit-dinput8.dll wurde geprüft.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Stellen Sie die mit Redux 3.04 gelieferten Grafikdateien wieder her. Fehlende Dateien können zu einer schwarzen 3D-Ansicht führen.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Die Grafikdateien von Redux 3.04 wurden gefunden."
+    "Redux 3.04の同梱描画資源を確認しました。": "Die Grafikdateien von Redux 3.04 wurden gefunden.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Addon installieren — Vorläufige Öffnung gesperrter W2C-Straßen",
+    "LBx64 RC3.1をインストール": "LBx64 RC3.1 installieren",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Nicht ausgewählte Komponenten werden ebenfalls mit Installationsanleitungen im Ordner Optional gespeichert.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Bei der Installation von LBx64 wird der alte LB gesichert und ersetzt. DLSS und DLAA erfordern ein kompatibles NVIDIA-System und SunSet."
   },
   "it": {
     "W2C to MW のアンインストール": "Disinstallazione W2C to MW",
@@ -1425,7 +1445,11 @@
     "Redux 3.04と一致。": "Corrisponde all’eseguibile incluso in Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Il file dinput8.dll a 32 bit incluso in {0} è stato verificato.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Ripristina i file grafici inclusi in Redux 3.04. Se mancano, la vista 3D può risultare nera.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Sono stati trovati i file grafici di Redux 3.04."
+    "Redux 3.04の同梱描画資源を確認しました。": "Sono stati trovati i file grafici di Redux 3.04.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Installa Addon — Apertura provvisoria delle strade W2C chiuse",
+    "LBx64 RC3.1をインストール": "Installa LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Anche i componenti non selezionati vengono salvati in Optional con le guide di installazione.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "L’installazione di LBx64 crea un backup e sostituisce il vecchio LB. DLSS e DLAA richiedono un sistema NVIDIA compatibile e SunSet."
   },
   "ko": {
     "W2C to MW のアンインストール": "제거 W2C to MW",
@@ -1663,7 +1687,11 @@
     "Redux 3.04と一致。": "Redux 3.04에 포함된 실행 파일과 일치합니다.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "{0}에 포함된 32비트 dinput8.dll을 확인했습니다.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Redux 3.04에 포함된 그래픽 파일을 복원하세요. 파일이 없으면 3D 화면이 검게 표시될 수 있습니다.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Redux 3.04의 그래픽 파일을 확인했습니다."
+    "Redux 3.04の同梱描画資源を確認しました。": "Redux 3.04의 그래픽 파일을 확인했습니다.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Addon 설치 — W2C 미개통 구간 임시 개방",
+    "LBx64 RC3.1をインストール": "LBx64 RC3.1 설치",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "선택하지 않은 구성 요소도 설치 안내와 함께 Optional 폴더에 저장합니다.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "LBx64 설치 시 기존 LB를 백업한 후 교체합니다. DLSS 및 DLAA에는 호환되는 NVIDIA 환경과 SunSet이 필요합니다."
   },
   "pl": {
     "W2C to MW のアンインストール": "Odinstaluj W2C to MW",
@@ -1901,7 +1929,11 @@
     "Redux 3.04と一致。": "Plik zgodny z wersją dołączoną do Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Zweryfikowano 32-bitowy plik dinput8.dll dołączony do {0}.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Przywróć pliki graficzne dołączone do Redux 3.04. Brakujące pliki mogą spowodować wyświetlenie czarnego obrazu 3D.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Znaleziono pliki graficzne Redux 3.04."
+    "Redux 3.04の同梱描画資源を確認しました。": "Znaleziono pliki graficzne Redux 3.04.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Zainstaluj Addon — Tymczasowe otwarcie zamkniętych dróg W2C",
+    "LBx64 RC3.1をインストール": "Zainstaluj LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Niewybrane składniki także zostaną zapisane w folderze Optional wraz z instrukcjami instalacji.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Instalacja LBx64 tworzy kopię zapasową starego LB i zastępuje go. DLSS i DLAA wymagają zgodnego systemu NVIDIA oraz SunSet."
   },
   "ru": {
     "W2C to MW のアンインストール": "Отключение W2C to MW",
@@ -2139,7 +2171,11 @@
     "Redux 3.04と一致。": "Соответствует исполняемому файлу из Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Проверен 32-битный файл dinput8.dll из комплекта {0}.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Восстановите графические файлы из комплекта Redux 3.04. Без них 3D-изображение может быть чёрным.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Графические файлы Redux 3.04 найдены."
+    "Redux 3.04の同梱描画資源を確認しました。": "Графические файлы Redux 3.04 найдены.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Установить Addon — Временное открытие закрытых дорог W2C",
+    "LBx64 RC3.1をインストール": "Установить LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Невыбранные компоненты также сохраняются в папке Optional вместе с инструкциями по установке.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "При установке LBx64 старый LB сохраняется в резервной копии и заменяется. Для DLSS и DLAA нужны совместимая система NVIDIA и SunSet."
   },
   "es": {
     "W2C to MW のアンインストール": "Desinstalar W2C to MW",
@@ -2377,7 +2413,11 @@
     "Redux 3.04と一致。": "Coincide con el ejecutable incluido en Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Se ha verificado el archivo dinput8.dll de 32 bits incluido en {0}.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Restaura los archivos gráficos incluidos en Redux 3.04. Si faltan, la vista 3D puede quedar en negro.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Se han encontrado los archivos gráficos de Redux 3.04."
+    "Redux 3.04の同梱描画資源を確認しました。": "Se han encontrado los archivos gráficos de Redux 3.04.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Instalar Addon — Apertura provisional de carreteras W2C cerradas",
+    "LBx64 RC3.1をインストール": "Instalar LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Los componentes no seleccionados también se guardan en Optional con sus guías de instalación.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Al instalar LBx64 se guarda una copia y se sustituye el LB anterior. DLSS y DLAA requieren un sistema NVIDIA compatible y SunSet."
   },
   "sv": {
     "W2C to MW のアンインストール": "Avinstallera W2C to MW",
@@ -2615,7 +2655,11 @@
     "Redux 3.04と一致。": "Matchar den körbara filen som medföljer Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "32-bitarsfilen dinput8.dll som medföljer {0} har verifierats.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Återställ grafikfilerna som medföljer Redux 3.04. Om filer saknas kan 3D-vyn bli svart.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Grafikfilerna från Redux 3.04 hittades."
+    "Redux 3.04の同梱描画資源を確認しました。": "Grafikfilerna från Redux 3.04 hittades.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Installera Addon — Tillfällig öppning av stängda W2C-vägar",
+    "LBx64 RC3.1をインストール": "Installera LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Även komponenter som inte valts sparas i Optional med installationsguider.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "När LBx64 installeras säkerhetskopieras och ersätts den gamla LB. DLSS och DLAA kräver ett kompatibelt NVIDIA-system och SunSet."
   },
   "th": {
     "W2C to MW のアンインストール": "ปิดติดตั้ง W2C to MW",
@@ -2853,7 +2897,11 @@
     "Redux 3.04と一致。": "ตรงกับไฟล์ปฏิบัติการที่มาพร้อม Redux 3.04",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "ตรวจสอบไฟล์ dinput8.dll แบบ 32 บิตที่มาพร้อม {0} แล้ว",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "กู้คืนไฟล์กราฟิกที่มากับ Redux 3.04 หากไฟล์ไม่ครบ ภาพ 3 มิติอาจเป็นสีดำ",
-    "Redux 3.04の同梱描画資源を確認しました。": "พบไฟล์กราฟิกที่มากับ Redux 3.04 แล้ว"
+    "Redux 3.04の同梱描画資源を確認しました。": "พบไฟล์กราฟิกที่มากับ Redux 3.04 แล้ว",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "ติดตั้ง Addon — เปิดถนน W2C ที่ยังไม่เปิดใช้เป็นการชั่วคราว",
+    "LBx64 RC3.1をインストール": "ติดตั้ง LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "ส่วนประกอบที่ไม่ได้เลือกจะถูกบันทึกในโฟลเดอร์ Optional พร้อมคู่มือการติดตั้งด้วย",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "เมื่อติดตั้ง LBx64 จะสำรองข้อมูลและแทนที่ LB รุ่นเก่า DLSS และ DLAA ต้องใช้ระบบ NVIDIA ที่รองรับและ SunSet"
   },
   "zh-Hans": {
     "W2C to MW のアンインストール": "解除 W2C to MW",
@@ -3091,7 +3139,11 @@
     "Redux 3.04と一致。": "与 Redux 3.04 附带的可执行文件一致。",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "已验证 {0} 附带的 32 位 dinput8.dll。",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "请恢复 Redux 3.04 随附的图形文件。缺少文件时，3D 画面可能会变黑。",
-    "Redux 3.04の同梱描画資源を確認しました。": "已找到 Redux 3.04 随附的图形文件。"
+    "Redux 3.04の同梱描画資源を確認しました。": "已找到 Redux 3.04 随附的图形文件。",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "安装 Addon — 临时开放 W2C 未通车路段",
+    "LBx64 RC3.1をインストール": "安装 LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "未选择的组件也会与安装指南一起保存到 Optional 文件夹。",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "安装 LBx64 时会备份并替换旧版 LB。DLSS 和 DLAA 需要兼容的 NVIDIA 环境和 SunSet。"
   },
   "es-MX": {
     "W2C to MW のアンインストール": "Desinstalar W2C to MW",
@@ -3329,7 +3381,11 @@
     "Redux 3.04と一致。": "Coincide con el ejecutable incluido en Redux 3.04.",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "Se verificó el archivo dinput8.dll de 32 bits incluido en {0}.",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "Restaura los archivos gráficos incluidos en Redux 3.04. Si faltan, la vista 3D puede verse en negro.",
-    "Redux 3.04の同梱描画資源を確認しました。": "Se encontraron los archivos gráficos de Redux 3.04."
+    "Redux 3.04の同梱描画資源を確認しました。": "Se encontraron los archivos gráficos de Redux 3.04.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Instalar Addon — Apertura provisional de vías W2C cerradas",
+    "LBx64 RC3.1をインストール": "Instalar LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Los componentes no seleccionados también se guardan en Optional con sus guías de instalación.",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Al instalar LBx64 se guarda una copia y se reemplaza el LB anterior. DLSS y DLAA requieren un sistema NVIDIA compatible y SunSet."
   },
   "zh-Hant": {
     "W2C to MW のアンインストール": "解除 W2C to MW",
@@ -3567,6 +3623,10 @@
     "Redux 3.04と一致。": "與 Redux 3.04 隨附的執行檔相符。",
     "{0} 同梱の32ビット dinput8.dll を照合しました。": "已驗證 {0} 隨附的 32 位元 dinput8.dll。",
     "Redux 3.04の同梱描画資源を復元してください。不足したまま起動すると3D画面が黒くなる場合があります。": "請還原 Redux 3.04 隨附的圖形檔案。缺少檔案時，3D 畫面可能會變黑。",
-    "Redux 3.04の同梱描画資源を確認しました。": "已找到 Redux 3.04 隨附的圖形檔案。"
+    "Redux 3.04の同梱描画資源を確認しました。": "已找到 Redux 3.04 隨附的圖形檔案。",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "安裝 Addon — 暫時開放 W2C 未通車路段",
+    "LBx64 RC3.1をインストール": "安裝 LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "未選取的元件也會連同安裝指南儲存至 Optional 資料夾。",
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "安裝 LBx64 時會備份並取代舊版 LB。DLSS 與 DLAA 需要相容的 NVIDIA 環境和 SunSet。"
   }
 }

@@ -6,8 +6,15 @@ static void* worldPendingShadowView=nullptr;
 static BYTE* worldPendingShadowTarget=nullptr;
 static void(__cdecl* worldShadowModelsOriginal)(void*,int);
 static bool EnsureWorldCommitHook();
+static bool AddonShadowOutsideZone(unsigned id){
+#ifdef W2C_PUBLIC_BUILD
+ return worldGeometryAddon.count(id)!=0;
+#else
+ return false;
+#endif
+}
 static bool ShadowSectionEligible(unsigned id,const Section& section,const RenderFrustum& frustum){
- return section.vb&&section.ib&&Distance(section.header,cameraPosition)<=400.f*400.f&&(zoneIndex==~0u||id==26000||zones[zoneIndex].sections.count(id))&&frustum.Visible(section.header.minimum,section.header.maximum);
+ return section.vb&&section.ib&&Distance(section.header,cameraPosition)<=400.f*400.f&&(zoneIndex==~0u||id==26000||zones[zoneIndex].sections.count(id)||AddonShadowOutsideZone(id))&&frustum.Visible(section.header.minimum,section.header.maximum);
 }
 static bool DrawShadowOwner(unsigned id,unsigned owner,const RenderFrustum& frustum){
  if(!owner)return true;if(owner==~0u)return false;if(owner>=overlapGroups.size())return true;
@@ -24,11 +31,11 @@ static void DrawWorldShadowGeometry(const D3DMATRIX& clip){
  device->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);device->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);device->SetSamplerState(0,D3DSAMP_MIPFILTER,D3DTEXF_LINEAR);
  RenderFrustum frustum(clip);unsigned count=0,ownerSkipped=0,propsCulled=0;bool wasDepth=envDepthPass;envDepthPass=true;
  device->SetVertexDeclaration(envDecl);
- for(auto& [id,section]:sections){if(!section.page||!ShadowSectionEligible(id,section,frustum))continue;auto& page=*section.page;
+ for(const auto& [id,residentSection]:v2ResidentSections){auto& section=*residentSection;if(!section.page||!ShadowSectionEligible(id,section,frustum))continue;auto& page=*section.page;
   device->SetRenderState(D3DRS_ALPHATESTENABLE,FALSE);device->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);device->SetRenderState(D3DRS_DEPTHBIAS,0);device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS,0);float opaque[4]{0,0,0,0};device->SetPixelShaderConstantF(0,opaque,1);
-  for(const auto& span:page.shadowSpans){if(!DrawShadowOwner(id,span.source,frustum)){++ownerSkipped;continue;}auto& block=page.blocks[span.chunk];if(!block.shadow)continue;device->SetStreamSource(0,block.vb,0,40);device->SetIndices(block.shadow);device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,block.vertices,span.local,span.count/3);++count;}
+  for(const auto& span:page.shadowSpans){if(zoneIndex!=~0u&&!zones[zoneIndex].sections.count(id)&&span.source!=0xFFFFFFFEu)continue;if(!DrawShadowOwner(id,span.source,frustum)){++ownerSkipped;continue;}auto& block=page.blocks[span.chunk];if(!block.shadow)continue;device->SetStreamSource(0,block.vb,0,40);device->SetIndices(block.shadow);device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,block.vertices,span.local,span.count/3);++count;}
   float alpha[4]{1,0,0,0};device->SetPixelShaderConstantF(0,alpha,1);
-  for(unsigned ordinal=0;ordinal<page.draws.size();++ordinal){const auto& m=page.draws[ordinal];if(!DrawShadowOwner(id,m.owner,frustum)){++ownerSkipped;continue;}auto material=MaterialOf(m.texture);if(!material.blend&&material.usage!=1&&m.texture!=0x57FC91B7)continue;if((material.blend&&material.usage!=1)||envNightOverlays.count(m.texture)||m.texture==0xD2E09151||m.texture==0x29D9478C||!frustum.Visible(m.minimum,m.maximum))continue;Header bounds{};bounds.minimum=m.minimum;bounds.maximum=m.maximum;if(Distance(bounds,cameraPosition)>400.f*400.f)continue;auto texture=textures.find(m.texture);if(m.texture&&(texture==textures.end()||!texture->second))continue;SetMaterial(m.texture);device->SetTexture(0,texture==textures.end()?nullptr:texture->second);device->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);auto [begin,n]=page.drawSpans[ordinal];for(unsigned i=begin;i<begin+n;++i){const auto& span=page.spans[i];auto& block=page.blocks[span.chunk];device->SetStreamSource(0,block.vb,0,40);device->SetIndices(block.ib);device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,block.vertices,span.local,span.count/3);++count;}}
+  for(unsigned ordinal=0;ordinal<page.draws.size();++ordinal){const auto& m=page.draws[ordinal];if(zoneIndex!=~0u&&!zones[zoneIndex].sections.count(id)&&m.owner!=0xFFFFFFFEu)continue;if(!DrawShadowOwner(id,m.owner,frustum)){++ownerSkipped;continue;}auto material=MaterialOf(m.texture);if(!material.blend&&material.usage!=1&&m.texture!=0x57FC91B7)continue;if((material.blend&&material.usage!=1)||envNightOverlays.count(m.texture)||m.texture==0xD2E09151||m.texture==0x29D9478C||!frustum.Visible(m.minimum,m.maximum))continue;Header bounds{};bounds.minimum=m.minimum;bounds.maximum=m.maximum;if(Distance(bounds,cameraPosition)>400.f*400.f)continue;auto texture=textures.find(m.texture);if(m.texture&&(texture==textures.end()||!texture->second))continue;SetMaterial(m.texture);device->SetTexture(0,texture==textures.end()?nullptr:texture->second);device->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE);auto [begin,n]=page.drawSpans[ordinal];for(unsigned i=begin;i<begin+n;++i){const auto& span=page.spans[i];auto& block=page.blocks[span.chunk];device->SetStreamSource(0,block.vb,0,40);device->SetIndices(block.ib);device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,block.vertices,span.local,span.count/3);++count;}}
  }
  device->SetVertexDeclaration(envDepthPropDecl);float propAlpha[4]{1,0,0,0};device->SetPixelShaderConstantF(0,propAlpha,1);
  for(auto ptr:activeProps){auto& p=*ptr;if(!p.spawner||!p.initialized||!p.gpu.vb||p.nativeFractured||PursuitPayloadOwner(&p)||(p.nativeRender&&p.nativeTouched))continue;

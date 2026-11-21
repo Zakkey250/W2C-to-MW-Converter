@@ -40,7 +40,8 @@ def import_original(w2c, quality, workspace, *, carbon=None):
     files.extend({"role": role, "path": str(path), "import": True, "missingTextureFallbacks": textures}
                  for role, path, textures in carbon_banks(carbon))
     config.write_text(json.dumps({"sourceVariant": quality, "files": files}, ensure_ascii=False), encoding="utf-8")
-    command = [str(Path(__file__).with_name("bin") / "SourceWorld.exe")] if getattr(sys, "frozen", False) else ["dotnet", str(SOURCE_COMPILER)]
+    from setup_sourceworld import importer_command
+    command = importer_command()
     subprocess.run([*command, "export", str(config), str(workspace / "source")], check=True,
                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
@@ -48,6 +49,9 @@ def import_original(w2c, quality, workspace, *, carbon=None):
 def convert(w2c, mw, quality, output, work=None, *, carbon=None, vault_tool=None, mw_reference=None,
             progress=lambda *_: None):
     from build_world import assemble_world, build_assets, mw_inputs, mw_target_base, file_digest
+
+    w2c, mw, carbon, vault_tool, mw_reference = (
+        path.resolve() if path is not None else None for path in (w2c, mw, carbon, vault_tool, mw_reference))
 
     target = check_target(mw)
     if target["status"] != "ok":
@@ -77,7 +81,7 @@ def convert(w2c, mw, quality, output, work=None, *, carbon=None, vault_tool=None
         progress("原本のモデル・テクスチャを照合", 25)
         build_assets(workspace, quality, progress, w2c=w2c, mw=mw, carbon=carbon, vault_tool=vault_tool,
                      mw_reference=mw_reference)
-        package = staging / "package"
+        package = (workspace if work is not None else staging) / "package"
         progress("ワールドパックを組み立てて検証", 80)
         result = assemble_world(workspace, w2c, quality, mw, package, mw_reference=mw_reference,
                                 target_fingerprints=target_fingerprints)
@@ -98,6 +102,12 @@ def convert(w2c, mw, quality, output, work=None, *, carbon=None, vault_tool=None
             "carbonPursuitOmission": report["carbonPursuitOmission"],
             "pendingFeatures": report["pendingFeatures"],
         }
+        from components import prepare
+        manifest_path = package / "package.json"
+        manifest = json.loads(manifest_path.read_bytes())
+        manifest["converterVersion"] = "RC6"
+        manifest["optionalFiles"] = prepare(package)
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         progress("検証済みパックを保存", 95)
         os.replace(package, output)
         return result

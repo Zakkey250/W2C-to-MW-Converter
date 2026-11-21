@@ -44,17 +44,23 @@ static float envDP[16][4]{},envDD[16][4]{},envDC[16][4]{};
 static unsigned envDynamicMask=~0u;
 static unsigned envSurfaceHash=0;static bool envSurfaceSet=false;
 static bool envBoundedLights=true;
-static unsigned EnvironmentDynamicMask(const Mesh* bounds){
+static unsigned envActiveDynamicLights=0;
+static float envDynamicRangeSquared[16]{};
+static unsigned EnvironmentDynamicMask(const Mesh* bounds,unsigned candidates=~0u){
+ candidates&=envActiveDynamicLights;
+ if(!bounds)return candidates;
  unsigned mask=0;
- for(unsigned n=0;n<envVehicleLights;++n){
-  if(envDC[n][0]==0&&envDC[n][1]==0&&envDC[n][2]==0)continue;
-  if(!bounds||RenderLightIntersects({envDP[n][0],envDP[n][1],envDP[n][2]},std::abs(envDP[n][3]),bounds->minimum,bounds->maximum))mask|=1u<<n;
+ while(candidates){
+  const unsigned n=std::countr_zero(candidates);
+  candidates&=candidates-1;
+  if(RenderLightIntersectsSquared({envDP[n][0],envDP[n][1],envDP[n][2]},
+                                  envDynamicRangeSquared[n],bounds->minimum,bounds->maximum))mask|=1u<<n;
  }
  return mask;
 }
-static void SetEnvironmentDynamicLights(const Mesh* bounds){
+static void SetEnvironmentDynamicLights(const Mesh* bounds,unsigned preparedMask=~0u){
  if(envDepthPass||!envBoundedLights)return;
- const unsigned mask=EnvironmentDynamicMask(bounds);
+ const unsigned mask=preparedMask==~0u?EnvironmentDynamicMask(bounds):preparedMask;
  if(mask==envDynamicMask)return;envDynamicMask=mask;
  float pos[16][4]{},dir[16][4]{},color[16][4]{};unsigned count=0;
  for(unsigned n=0;n<envVehicleLights;++n)if(mask&(1u<<n)){memcpy(pos[count],envDP[n],16);memcpy(dir[count],envDD[n],16);memcpy(color[count],envDC[n],16);++count;}
@@ -134,6 +140,12 @@ static void ReadEnvironmentVehicleLights(Vec3 eye){
   }
 #endif
  }__except(EXCEPTION_EXECUTE_HANDLER){envVehicleLights=0;}
+ envActiveDynamicLights=0;
+ for(unsigned n=0;n<envVehicleLights;++n){
+  if(envDC[n][0]==0&&envDC[n][1]==0&&envDC[n][2]==0)continue;
+  envActiveDynamicLights|=1u<<n;
+  envDynamicRangeSquared[n]=RenderLightRangeSquared(std::abs(envDP[n][3]));
+ }
 #ifdef W2C_PUBLIC_BUILD
  if(worldLogEnabled){
   static DWORD lastReport=0;
@@ -226,26 +238,42 @@ static bool InitEnvironmentDepthShaders(){
 static void SetEnvironmentPropDepth(const D3DMATRIX& world){device->SetVertexDeclaration(envDepthPropDecl);device->SetVertexShader(envDepthVS);device->SetPixelShader(envDepthPS);device->SetVertexShaderConstantF(5,&world._11,4);float uv[4]{0,0,1,1};device->SetVertexShaderConstantF(4,uv,1);}
 static bool ReadSunSetUniforms(){if(!GetModuleHandleA("SunSet.asi"))return false;__try{auto e=*(BYTE**)0x93DE78;if(!e||*(unsigned*)(e+4)!=0)return false;auto fx=*(ID3DXEffect**)(e+0x48);if(!fx)return false;auto get=[&](const char* name,float* value){auto handle=fx->GetParameterByName(nullptr,name);return handle&&SUCCEEDED(fx->GetVector(handle,(D3DXVECTOR4*)value));};if(!get("cvDiffuseColor",envDiffuse)||!get("cvAmbientColor",envAmbient))return false;
  get("cvFogColor",envFog);get("cvFogSunColor",envFogSun);get("cvFogValue",envFogValue);auto tod=*(BYTE**)0x9B392C;if(!tod)return false;{envTOD=*(float*)(tod+8);memcpy(envSun,tod+0x180,16);float length=std::sqrt(envSun[0]*envSun[0]+envSun[1]*envSun[1]+envSun[2]*envSun[2]);if(length>.0001f)for(unsigned n=0;n<3;++n)envSun[n]/=length;}return std::isfinite(envTOD)&&envTOD>=0&&envTOD<=1;}__except(EXCEPTION_EXECUTE_HANDLER){return false;}}
+#include "EnvironmentSubmitState.h"
+static EnvironmentSubmitState envSurfaceSubmit;
 static bool envLocalSet=false;static std::array<unsigned,8> envLocalIndices{};
 static bool BeginEnvironment(const D3DMATRIX& clip,Vec3 eye,bool mainView){if(worldLogEnabled)envEmissiveMasks=0;if(mainView){InstallEnvironmentFlareHook();envRealTime=GetTickCount()*.001f;envWorldTime=reinterpret_cast<float(__cdecl*)()>(0x6E8DE0)();envAvailable=ReadSunSetUniforms();
 #ifdef W2C_PUBLIC_BUILD
  if(envAvailable)w2c_public_light::BalanceDaylight(envDiffuse,envAmbient,1.80f,PublicShadeWeight());
 #endif
- ReadEnvironmentVehicleLights(eye);envNight=envAvailable&&(envTOD>envLightsOn||envTOD<envLightsOff)?1.f:0.f;envAnimationDraws=envLitDraws=0;}if(!envAvailable||!InitEnvironmentShaders())return false;device->SetVertexDeclaration(envDecl);if(envDepthPass&&!InitEnvironmentDepthShaders())return false;device->SetVertexShader(envDepthPass?envDepthVS:envVS);device->SetPixelShader(envDepthPass?envDepthPS:envPS);device->SetVertexShaderConstantF(0,&clip._11,4);D3DMATRIX identity{};identity._11=identity._22=identity._33=identity._44=1;device->SetVertexShaderConstantF(5,&identity._11,4);device->SetPixelShaderConstantF(0,envDiffuse,1);device->SetPixelShaderConstantF(1,envAmbient,1);device->SetPixelShaderConstantF(2,envSun,1);device->SetPixelShaderConstantF(3,envFog,1);device->SetPixelShaderConstantF(4,envFogSun,1);device->SetPixelShaderConstantF(5,envFogValue,1);float p[4]{eye.x,eye.y,eye.z,1};device->SetPixelShaderConstantF(6,p,1);if(!envDepthPass){BindEnvironmentRoad();BindEnvironmentShadow();}envDynamicMask=~0u;envSurfaceSet=false;envLocalSet=false;device->SetPixelShaderConstantF(33,envDP[0],16);device->SetPixelShaderConstantF(49,envDD[0],16);device->SetPixelShaderConstantF(65,envDC[0],16);float dynamic[4]{float(envVehicleLights),envShadeHeadlightBoost,0,0};device->SetPixelShaderConstantF(81,dynamic,1);device->SetSamplerState(1,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MIPFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MIPMAPLODBIAS,0);device->SetSamplerState(1,D3DSAMP_MAXMIPLEVEL,0);return true;}
+ ReadEnvironmentVehicleLights(eye);envNight=envAvailable&&(envTOD>envLightsOn||envTOD<envLightsOff)?1.f:0.f;envAnimationDraws=envLitDraws=0;}if(!envAvailable||!InitEnvironmentShaders())return false;device->SetVertexDeclaration(envDecl);if(envDepthPass&&!InitEnvironmentDepthShaders())return false;device->SetVertexShader(envDepthPass?envDepthVS:envVS);device->SetPixelShader(envDepthPass?envDepthPS:envPS);device->SetVertexShaderConstantF(0,&clip._11,4);D3DMATRIX identity{};identity._11=identity._22=identity._33=identity._44=1;device->SetVertexShaderConstantF(5,&identity._11,4);device->SetPixelShaderConstantF(0,envDiffuse,1);device->SetPixelShaderConstantF(1,envAmbient,1);device->SetPixelShaderConstantF(2,envSun,1);device->SetPixelShaderConstantF(3,envFog,1);device->SetPixelShaderConstantF(4,envFogSun,1);device->SetPixelShaderConstantF(5,envFogValue,1);float p[4]{eye.x,eye.y,eye.z,1};device->SetPixelShaderConstantF(6,p,1);if(!envDepthPass){BindEnvironmentRoad();BindEnvironmentShadow();}envDynamicMask=~0u;envSurfaceSet=false;envLocalSet=false;envSurfaceSubmit.reset();device->SetPixelShaderConstantF(33,envDP[0],16);device->SetPixelShaderConstantF(49,envDD[0],16);device->SetPixelShaderConstantF(65,envDC[0],16);float dynamic[4]{float(envVehicleLights),envShadeHeadlightBoost,0,0};device->SetPixelShaderConstantF(81,dynamic,1);device->SetSamplerState(1,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MIPFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MIPMAPLODBIAS,0);device->SetSamplerState(1,D3DSAMP_MAXMIPLEVEL,0);return true;}
 static unsigned EnvironmentTexture(unsigned hash){auto it=envFrames.find(hash);if(it==envFrames.end())return hash;auto& a=envAnimations[it->second.first];unsigned index=(unsigned((a.base?envRealTime:envWorldTime)*a.fps)+it->second.second)%a.frames.size();auto next=a.frames[index];if(Texture(next)){++envAnimationDraws;return next;}return hash;}
-static void SetEnvironmentSurface(unsigned hash){if(envSurfaceSet&&envSurfaceHash==hash)return;envSurfaceHash=hash;envSurfaceSet=true;auto it=envMaterials.find(hash);EnvironmentMaterial m;if(it!=envMaterials.end())m=it->second;float uv[4]{0,0,1,1};if(m.scroll==3){uv[0]=m.offsetS/-1024.f;uv[1]=m.offsetT/-1024.f;uv[2]=1+m.scaleS/256.f;uv[3]=1+m.scaleT/256.f;}else if(m.scroll){float time=envWorldTime;if(m.scroll==2&&m.step>0)time=float(int(time/(m.step/256.f)));uv[0]=std::fmod(time*m.speedS/4096.f,1.f);uv[1]=std::fmod(time*m.speedT/4096.f,1.f);}device->SetVertexShaderConstantF(4,uv,1);if(envDepthPass)return;float emit[4]{m.rgb[0],m.rgb[1],m.rgb[2],m.brightness*(m.always?1:envNight)};float settings[4]{emit[3]>0?1.f:0.f,float(m.prelit),float(m.vertexColor),MaterialOf(hash).blend==2?1.f:0.f};if(m.mask&&settings[0]>0){auto mask=Texture(m.mask);
+static void SetEnvironmentSurface(unsigned hash){if(envSurfaceSet&&envSurfaceHash==hash)return;envSurfaceHash=hash;envSurfaceSet=true;auto it=envMaterials.find(hash);EnvironmentMaterial m;if(it!=envMaterials.end())m=it->second;float uv[4]{0,0,1,1};if(m.scroll==3){uv[0]=m.offsetS/-1024.f;uv[1]=m.offsetT/-1024.f;uv[2]=1+m.scaleS/256.f;uv[3]=1+m.scaleT/256.f;}else if(m.scroll){float time=envWorldTime;if(m.scroll==2&&m.step>0)time=float(int(time/(m.step/256.f)));uv[0]=std::fmod(time*m.speedS/4096.f,1.f);uv[1]=std::fmod(time*m.speedT/4096.f,1.f);}
+ envSurfaceSubmit.uv.bind(uv,[](const float* values,unsigned count){return SUCCEEDED(device->SetVertexShaderConstantF(4,values,count));});
+ if(envDepthPass)return;
+ const auto material=MaterialOf(hash);
+ const float brightness=m.brightness*(m.always?1:envNight);
+ float emission[8]{m.rgb[0],m.rgb[1],m.rgb[2],brightness,
+  brightness>0?1.f:0.f,float(m.prelit),float(m.vertexColor),material.blend==2?1.f:0.f};
+ if(m.mask&&emission[4]>0){auto mask=Texture(m.mask);
  // The mask uses the base material's UVs, including repeat and mirror modes.
- auto tile=MaterialOf(hash).tile;
+ const auto tile=material.tile;
  device->SetSamplerState(1,D3DSAMP_ADDRESSU,(tile&4)?D3DTADDRESS_MIRROR:((tile&1)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));
  device->SetSamplerState(1,D3DSAMP_ADDRESSV,(tile&8)?D3DTADDRESS_MIRROR:((tile&2)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));
- device->SetTexture(1,mask);if(!mask)settings[0]=0;else if(worldLogEnabled)++envEmissiveMasks;}else device->SetTexture(1,nullptr);device->SetPixelShaderConstantF(7,emit,1);device->SetPixelShaderConstantF(8,settings,1);envRoadSettings[0]=!envRoadReflectionPass&&EnvironmentRoadMaterial(hash)?1.f:0.f;device->SetPixelShaderConstantF(86,envRoadSettings,1);float signal[4]{0,0,0,-1},other[4]{};if(hash==0x5FA9D9B5){signal[0]=88.f/512;signal[1]=88.f/512;signal[2]=58.f/512;other[0]=220.f/512;other[1]=88.f/512;other[2]=350.f/512;other[3]=88.f/512;}else if(hash==0x123A6814){signal[0]=86.f/512;signal[1]=82.f/512;signal[2]=72.f/512;other[0]=256.f/512;other[1]=82.f/512;other[2]=427.f/512;other[3]=82.f/512;}else if(hash==0x5FA9D574){signal[0]=177.f/256;signal[1]=132.f/256;signal[2]=14.f/256;other[0]=177.f/256;other[1]=169.f/256;other[2]=177.f/256;other[3]=207.f/256;}if(signal[2]>0)signal[3]=*(int*)0x91601C==-1?1.f:0.f;device->SetPixelShaderConstantF(82,signal,1);device->SetPixelShaderConstantF(83,other,1);
+ device->SetTexture(1,mask);if(!mask)emission[4]=0;else if(worldLogEnabled)++envEmissiveMasks;}else device->SetTexture(1,nullptr);
+ envSurfaceSubmit.emission.bind(emission,[](const float* values,unsigned count){return SUCCEEDED(device->SetPixelShaderConstantF(7,values,count));});
+ envRoadSettings[0]=!envRoadReflectionPass&&EnvironmentRoadMaterial(hash)?1.f:0.f;
+ envSurfaceSubmit.road.bind(envRoadSettings,[](const float* values,unsigned count){return SUCCEEDED(device->SetPixelShaderConstantF(86,values,count));});
+ float signal[8]{0,0,0,-1};auto* other=signal+4;
+ if(hash==0x5FA9D9B5){signal[0]=88.f/512;signal[1]=88.f/512;signal[2]=58.f/512;other[0]=220.f/512;other[1]=88.f/512;other[2]=350.f/512;other[3]=88.f/512;}else if(hash==0x123A6814){signal[0]=86.f/512;signal[1]=82.f/512;signal[2]=72.f/512;other[0]=256.f/512;other[1]=82.f/512;other[2]=427.f/512;other[3]=82.f/512;}else if(hash==0x5FA9D574){signal[0]=177.f/256;signal[1]=132.f/256;signal[2]=14.f/256;other[0]=177.f/256;other[1]=169.f/256;other[2]=177.f/256;other[3]=207.f/256;}if(signal[2]>0)signal[3]=*(int*)0x91601C==-1?1.f:0.f;
+ envSurfaceSubmit.signal.bind(signal,[](const float* values,unsigned count){return SUCCEEDED(device->SetPixelShaderConstantF(82,values,count));});
 }
-static void SetEnvironmentMaterial(unsigned hash,const EnvironmentMeshLights& meshLights,const Mesh* bounds=nullptr){
- SetEnvironmentSurface(hash);if(envDepthPass)return;SetEnvironmentDynamicLights(bounds);
+static void SetEnvironmentMaterial(unsigned hash,const EnvironmentMeshLights& meshLights,const Mesh* bounds=nullptr,unsigned preparedMask=~0u){
+ SetEnvironmentSurface(hash);if(envDepthPass)return;SetEnvironmentDynamicLights(bounds,preparedMask);
  const auto& nearby=envNight?meshLights.night:meshLights.day;
  if(envLocalSet&&envLocalIndices==nearby)return;
  envLocalSet=true;envLocalIndices=nearby;
- float pos[8][4]{},color[8][4]{},dir[8][4]{};unsigned count=0;
+ float localLightRegisters[24][4]{};
+ auto* pos=localLightRegisters;auto* color=localLightRegisters+8;auto* dir=localLightRegisters+16;unsigned count=0;
  for(unsigned index:nearby){
   if(index==~0u)continue;
   const auto& light=envLights[index];
@@ -271,14 +299,17 @@ static void SetEnvironmentMaterial(unsigned hash,const EnvironmentMeshLights& me
  }
  if(count)++envLitDraws;
  float local[4]{float(count),0,0,0};device->SetPixelShaderConstantF(84,local,1);
- device->SetPixelShaderConstantF(9,pos[0],8);device->SetPixelShaderConstantF(17,color[0],8);device->SetPixelShaderConstantF(25,dir[0],8);
+ device->SetPixelShaderConstantF(9,localLightRegisters[0],24);
 }
 // Split index ranges only, preserving source vertices and normals. Worker-side
 // light selection keeps per-frame work independent of the full source light count.
 #include "EnvironmentBatch.h"
 
 static void SubmitEnvironmentFlares(void* view,Vec3 eye,int destinationType){envFlareDraws=0;if(!envAvailable)return;int gx=int(std::floor(eye.x/64)),gy=int(std::floor(eye.y/64));auto submit=reinterpret_cast<void(__cdecl*)(void*,NativeEnvironmentFlare*,void*,float,int,int,float,DWORD,float)>(0x505380);
- for(int x=gx-8;x<=gx+8;++x)for(int y=gy-8;y<=gy+8;++y){auto it=envFlareGrid.find({x,y});if(it==envFlareGrid.end())continue;for(auto n:it->second){auto& source=envFlares[n];float intensity=source.type==12?envNight:1.f;
+ for(int x=gx-8;x<=gx+8;++x)
+  for(auto it=envFlareGrid.lower_bound({x,gy-8});
+      it!=envFlareGrid.end()&&it->first.first==x&&it->first.second<=gy+8;++it){
+   for(auto n:it->second){auto& source=envFlares[n];float intensity=source.type==12?envNight:1.f;
 #ifdef W2C_PUBLIC_BUILD
  const auto ceiling=n<publicCeilingFlares.size()?publicCeilingFlares[n]:PublicCeilingFlare::Stock;
  if(ceiling==PublicCeilingFlare::Always)intensity=1.f;

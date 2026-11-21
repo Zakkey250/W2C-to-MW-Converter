@@ -221,7 +221,7 @@ def asi_loader_row(root):
     else:
         detail = "ゲームフォルダーに検証済みの32ビット dinput8.dll がありません。"
     return row("deployment", "Win32 ASI Loader", "action",
-               detail + " 検証済み: Ultimate ASI Loader 6.4.0 / 10.0.2。",
+               detail + " Ultimate ASI Loader: " + " / ".join(dict.fromkeys(checked["builds"].values())) + ".",
                sha256=digest, url=checked["url"])
 
 

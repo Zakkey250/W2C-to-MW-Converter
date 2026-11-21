@@ -15,12 +15,13 @@
     "file": "dinput8.dll",
     "builds": {
       "CF4A28C41199031F0378A082BF6FACB2575CB13A1C9AB2F5590652AB0E1AC205": "6.4.0",
-      "63B465DBC1BF9C5AB4E33C3CCAD099D9EDB702F2C51587AC8D4F196497396437": "10.0.2"
+      "63B465DBC1BF9C5AB4E33C3CCAD099D9EDB702F2C51587AC8D4F196497396437": "10.0.2",
+      "450304BA4F18646E43FAEB6CA06962E76F1BAF09860EC1A0A8751B1A4BEE50D1": "10.0.4"
     },
     "redistributedBuilds": {
       "9A2BB218AB014FA4AD56104108C26AE48BF3E22595C126CD4F41367C799DA722": "Redux 3.04"
     },
-    "url": "https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.2"
+    "url": "https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases/tag/v10.0.4"
   },
   "recommendedSunSet": {
     "version": "1.15.0",

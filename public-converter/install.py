@@ -22,6 +22,7 @@ from preflight import (
     sunset_config, sunset_row, texwizard_settings,
 )
 from package_layout import CORE, RULES, STREAM, stream_digest, target_core
+from components import LB_ARCHIVE
 
 
 CONTROL = "W2CMWPublic"
@@ -35,9 +36,34 @@ ROLLBACK_SOURCE = (
     else Path(__file__).resolve().parents[1] / "evidence/public-converter-2.0.0/desktop-build/rollback"
 ) / "W2CMW-Rollback.exe"
 FILES_TO_COMMIT = (*CORE, STREAM, SETTINGS, ASI, ROLLBACK_EXE, ROLLBACK_RECEIPT, MANIFEST)
+COMPONENT_STATE = f"{CONTROL}/components.json"
+
+
+def component_paths():
+    catalog = json.loads(Path(__file__).with_name("components-catalog.json").read_bytes())
+    roads = tuple(f"{CONTROL}/AddOns/{name}" for name in catalog["addonFiles"])
+    lb = tuple(catalog["lbx64Files"])
+    optional = (f"{CONTROL}/Optional/AddOn/game/TRACKS/L2RA.BUN",
+                f"{CONTROL}/Optional/AddOn/INSTALL.txt",
+                *(f"{CONTROL}/Optional/AddOn/game/{name}" for name in roads),
+                f"{CONTROL}/Optional/LBx64/{LB_ARCHIVE}",
+                f"{CONTROL}/Optional/LBx64/README-LBx64.txt")
+    from install_components import legacy_lb_paths
+    return (*roads, *lb, *optional, *legacy_lb_paths(), COMPONENT_STATE)
+
+
+FILES_TO_COMMIT += component_paths()
+
+
+def allowed_component(name):
+    from install_components import legacy_lb_path
+    return name in FILES_TO_COMMIT or legacy_lb_path(name)
+
 SUNSET_TO_COMMIT = (*SUNSET_FILES, TEXWIZARD_CONFIG, TEXWIZARD_ASI)
 SUNSET_TRANSACTION = f"{CONTROL}/sunset-transaction.json"
-DEFAULT_INI = b"[Debug]\r\nLogging=0\r\n\r\n[Renderer]\r\nFrameTelemetry=0\r\nProfilePresent=0\r\n"
+DEFAULT_INI = (b"[Debug]\r\nLogging=0\r\n\r\n[Renderer]\r\n"
+               b"ForwardDrawMeters=1000\r\nForwardPrefetchMeters=1200\r\nForwardFadeMs=250\r\n"
+               b"FrameTelemetry=0\r\nProfilePresent=0\r\n\r\n[Streaming]\r\nResidentGeometryViews=1\r\n")
 MIN_FREE_BYTES = 50 * 1024**3
 # These previews use the same verified world format. Install the converter's
 # current ASI after validating the selected package's own manifest and assets.
@@ -110,6 +136,16 @@ def checked_package(package, *, in_game=False):
         allowed.update(PURSUIT_FILES)
     if len(rows) != len(allowed) or names != allowed:
         raise ValueError("Unexpected generated package file list.")
+    optional = manifest.get("optionalFiles", [])
+    optional_names = {row["path"] for row in optional}
+    allowed_optional = {name.removeprefix(CONTROL + "/") for name in component_paths()
+                        if name.startswith(CONTROL + "/Optional/")}
+    if len(optional) != len(optional_names) or not optional_names <= allowed_optional:
+        raise ValueError("Invalid optional component manifest.")
+    for row in optional:
+        path = under(package, row["path"])
+        if path.stat().st_size != row["bytes"] or sha(path) != row["sha256"]:
+            raise ValueError(f"Optional component fingerprint differs: {row['path']}")
     # An explicitly selected game folder also contains MW's own files.
     # Only the exact manifest allowlist is read from that folder.
     if not in_game:
@@ -121,7 +157,7 @@ def checked_package(package, *, in_game=False):
                 if path.is_symlink() or path.is_junction():
                     raise ValueError(f"Reparse point in generated package: {path.name}")
             actual_names.update((parent / name).relative_to(package).as_posix() for name in files)
-        if actual_names != names | {"package.json"}:
+        if actual_names != names | optional_names | {"package.json"}:
             raise ValueError("Generated package contains an undeclared or missing file.")
     for row in rows:
         path = under(package, row["path"])
@@ -263,10 +299,10 @@ def recover(mw, *, sunset=False):
         return False
     require_game_closed()
     rows = json.loads(journal.read_bytes())
-    if not isinstance(rows, list) or not 0 < len(rows) <= len(allowed):
+    if not isinstance(rows, list) or not 0 < len(rows) <= len(allowed) + (0 if sunset else 256):
         raise ValueError("Invalid installation journal.")
     names = [row["path"] for row in rows]
-    if len(names) != len(set(names)) or any(name not in allowed for name in names):
+    if len(names) != len(set(names)) or any(name not in allowed and (sunset or not allowed_component(name)) for name in names):
         raise ValueError("Invalid installation journal paths.")
     for row in rows:
         name = row["path"]
@@ -293,7 +329,7 @@ def recover(mw, *, sunset=False):
 
 def commit_changes(mw, changes, *, sunset=False, before_commit=lambda _: None):
     journal_name, rollback, allowed = transaction_paths(sunset)
-    if any(name not in allowed for name in changes):
+    if any(name not in allowed and (sunset or not allowed_component(name)) for name in changes):
         raise ValueError("Unexpected installation paths.")
     rows = []
     for name, content in changes.items():
@@ -496,6 +532,9 @@ def uninstall(mw):
             current = under(mw, name)
             generation = under(mw, f"{CONTROL}/generations/{state['generation']}/Core/{name}")
             installed_sha = installed_stream if name == STREAM else sha(generation)
+            component_record = under(mw, COMPONENT_STATE)
+            if component_record.is_file():
+                installed_sha = json.loads(component_record.read_bytes()).get("files", {}).get(name, installed_sha)
             current_sha = sha(current)
             if current_sha != original_sha and (installed_sha is None or current_sha != installed_sha):
                 raise ValueError(f"配置後にファイルが変更されたため、復元を中止しました。{name}")
@@ -506,12 +545,26 @@ def uninstall(mw):
         rollback_sha = state.get("rollbackSha256")
         if rollback_sha and sha(under(mw, ROLLBACK_EXE)) == rollback_sha:
             changes[ROLLBACK_RECEIPT] = json_bytes({"rollbackSha256": rollback_sha, "language": state.get("language")})
+        component_record = under(mw, COMPONENT_STATE)
+        if component_record.is_file():
+            components = json.loads(component_record.read_bytes())
+            for name, expected in components["files"].items():
+                if sha(under(mw, name)) != expected:
+                    raise ValueError(f"Component file changed after installation: {name}")
+                if name in changes:
+                    continue
+                original = components["originals"][name]
+                backup = under(mw, f"{CONTROL}/component-originals/{name}")
+                if original is not None and sha(backup) != original:
+                    raise ValueError(f"Component backup differs: {name}")
+                changes[name] = backup if original is not None else None
+            changes[COMPONENT_STATE] = None
         changes.update({ASI: None, MANIFEST: None})
         commit_changes(mw, changes)
         return True
 
 
-def install(package, mw, *, language=None, mw_reference=None):
+def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64=False):
     from build_world import RUNTIME_ASI, Reader, mw_inputs
     from pursuit import PROP_TEXTURES
 
@@ -573,6 +626,8 @@ def install(package, mw, *, language=None, mw_reference=None):
                 raise ValueError(f"Select the same MW reference used for conversion: {STREAM}")
         stream_swapped = installed_stream != base_core[STREAM] or previous_stream != base_core[STREAM]
         protected_core = (*CORE, *((STREAM,) if stream_swapped else ()))
+        from install_components import component_state
+        previous_components = component_state(mw)
         verify_vault()
         for name in protected_core:
             path = under(mw, name)
@@ -580,6 +635,7 @@ def install(package, mw, *, language=None, mw_reference=None):
             if previous is not None:
                 current = under(mw, f"{CONTROL}/generations/{previous['generation']}/Core/{name}")
                 expected = previous_stream if name == STREAM else sha(current)
+                expected = previous_components.get("files", {}).get(name, expected)
             if expected is None or sha(path) != expected:
                 raise ValueError(f"Target MW resource has changed: {name}")
             backup = under(mw, f"{CONTROL}/originals/{name}")
@@ -589,6 +645,9 @@ def install(package, mw, *, language=None, mw_reference=None):
                 raise ValueError(f"Original MW backup fingerprint differs: {name}")
         new_generation_bytes = sum(row["bytes"] for row in package_info["files"])
         stage_budget = 64 * 1024**2 + 3 * sum(under(mw, name).stat().st_size for name in protected_core)
+        if package_info.get("optionalFiles"):
+            from install_components import space_budget
+            stage_budget += space_budget(package, mw, lbx64=lbx64)
         generation_index = under(mw, f"{CONTROL}/generations/{package_info['buildId']}/World/L5RA.w2i")
         if shutil.disk_usage(mw).free < MIN_FREE_BYTES + stage_budget + (0 if generation_index.exists() else new_generation_bytes):
             raise ValueError("Insufficient space for the generated world and rollback while retaining 50 GiB free.")
@@ -630,6 +689,11 @@ def install(package, mw, *, language=None, mw_reference=None):
         elif getattr(sys, "frozen", False):
             raise ValueError("The rollback executable is missing from the converter.")
         changes[MANIFEST] = json_bytes(installation)
+        from install_components import plan_components
+        component_changes, components = plan_components(package, mw, addon=addon, lbx64=lbx64)
+        changes.update(component_changes)
+        # The accepted ASI deliberately rejects unknown installation fields.
+        # Optional component metadata lives in components.json instead.
         def verify_runtime(name):
             if name == MANIFEST:
                 if sha(existing_asi) != runtime_sha:
@@ -639,7 +703,7 @@ def install(package, mw, *, language=None, mw_reference=None):
                 verify_vault()
 
         commit_changes(mw, changes, before_commit=verify_runtime)
-        return installation
+        return {**installation, "components": components, "converterVersion": "RC6"}
 
 
 def main():
@@ -653,6 +717,8 @@ def main():
     parser.add_argument("--sunset")
     parser.add_argument("--texwizard")
     parser.add_argument("--reduce-existing-glare", action="store_true")
+    parser.add_argument("--addon", action="store_true")
+    parser.add_argument("--lbx64", action="store_true")
     args = parser.parse_args()
     try:
         mw = checked_folder(args.mw)
@@ -665,7 +731,8 @@ def main():
             texwizard = Path(args.texwizard).resolve(strict=True) if args.texwizard else None
             print(json.dumps(install_sunset(mw, sunset, texwizard, reduce_existing_glare=args.reduce_existing_glare)))
         else:
-            print(json.dumps(install(checked_folder(args.package), mw, mw_reference=checked_folder(args.mw_reference))))
+            print(json.dumps(install(checked_folder(args.package), mw, mw_reference=checked_folder(args.mw_reference),
+                                     addon=args.addon, lbx64=args.lbx64)))
     except (OSError, ValueError, KeyError, BadZipFile, subprocess.CalledProcessError) as error:
         parser.exit(2, f"{error}\n")
 

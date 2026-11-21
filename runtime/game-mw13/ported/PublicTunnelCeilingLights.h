@@ -1,5 +1,6 @@
 #pragma once
 #include "PublicTunnelFixturePositions.generated.h"
+#include "TunnelAddonLights.h"
 
 // These flags are derived from the source zones after loading, never stored
 // in the world pack. Daytime ceiling lights only affect sheltered pixels.
@@ -79,15 +80,17 @@ static void ApplyPublicDayCeilingLights(Vec3 minimum, Vec3 maximum, std::array<u
     }
 }
 
-static void AddPublicCeilingLight(Vec3 position, PublicTunnelRoof roof, bool compact) {
+static void AddPublicCeilingLight(Vec3 position, PublicTunnelRoof roof, bool compact, bool authored = false) {
     position.z -= .18f;
     const auto cell = PublicLightCell(position);
     const auto index = unsigned(envLights.size());
     envLightGrid[cell].push_back(index);
     publicCeilingGrid[cell].push_back(index);
     const auto roofFlag = roof == PublicTunnelRoof::Polygon ? publicCeilingUnboundedRoof : 0u;
-    envLights.push_back({position, {1.f,.91f,.78f}, 1.85f, compact ? 25.f : 33.f, {0.f,0.f,-1.f},
-                        2u | publicCeilingLight | publicCeilingFlareLight | roofFlag, .88f, .40f, 0});
+    envLights.push_back({position, {1.f,.91f,.78f}, authored ? 1.55f : 1.85f,
+                        compact ? 25.f : 33.f, {0.f,0.f,-1.f},
+                        2u | publicCeilingLight | publicCeilingFlareLight | roofFlag,
+                        authored ? .80f : .88f, authored ? .23f : .40f, 0});
 }
 
 static void PreparePublicCeilingLights() {
@@ -134,6 +137,17 @@ static void PreparePublicCeilingLights() {
         }
         ++meshLights;
     }
+    for (const auto& fixture : tunnelAddonLights) {
+        AddPublicCeilingLight(fixture.position, PublicTunnelRoof::Polygon, true, true);
+        const auto index = unsigned(envFlares.size());
+        auto position = fixture.position;
+        position.z -= .22f;
+        envFlares.push_back({position,0,12,fixture.section,{0.f,0.f,1.f}});
+        envFlareGrid[PublicLightCell(position)].push_back(index);
+        publicCeilingFlares.push_back(PublicCeilingFlare::Always);
+    }
+    if (worldLogEnabled && !tunnelAddonLights.empty())
+        Log("WORLD_TUNNEL_ADDON_LIGHTS_ACTIVE fixtures=%u", unsigned(tunnelAddonLights.size()));
     // Compiled terrain draw tiles are 32 m wide; expand the receiver grid
     // once so the stream worker needs only one lookup per draw.
     for (const auto& [cell, indices] : publicCeilingGrid) {

@@ -1,8 +1,12 @@
 # W2C to MW Converter 2.0.0
 
-**Converter RC5.** Extract the ZIP and open `W2C-to-MW-Converter.exe`. At the first conversion, approve the on-screen importer setup. This uses the internet to fetch and verify the pinned dependencies, then builds the importer locally. Python and Visual Studio are not required.
+**Converter RC6.** Extract the ZIP and open `W2C-to-MW-Converter.exe`. At the first conversion, approve the on-screen importer setup. This uses the internet to fetch and verify the pinned dependencies, then builds the importer locally. Python and Visual Studio are not required.
 
-An existing public RC4 installation can use the separate [RC4 to RC5 Patch](https://github.com/Zakkey250/W2C-to-MW-Converter/releases/tag/v2.0.0-rc4-to-rc5-patch). If it fails, use this converter to rebuild from the original W2C files.
+Rebuild RC5 or earlier worlds from your original W2C files to get all RC6 changes. The converter retains the world backups from the first W2C installation.
+
+The review screen offers **Install Addon — W2C provisional access to unopened roads** and **Install LBx64 RC3.1**. The Addon is prepared for your selected quality and Carbon resources. Ordinary terrain, tunnel lighting and precipitation fixes also apply without the Addon. Unselected components are saved with guides in `Optional`, and after placement in `W2CMWPublic/Optional`.
+
+Installing LBx64 backs up and replaces the old LB and duplicate LB modules. The rollback utility restores the old files and settings. LBx64 RC3.1 requires a compatible EN-US 1.3 executable; do not select its automatic installation for Redux. DLSS and DLAA also require a compatible NVIDIA GPU, driver and SunSet. Other rendering wrappers may need separate configuration.
 
 1. Extract [W2C 2.0.0](https://nfsmods.xyz/mod/3041). Leave the original files in place.
 2. Prepare a separate Most Wanted game folder with a compatible MW 1.3 LAA (32-bit) `speed.exe` such as the verified NFSPatcher or Redux 3.04 build, a supported [Win32 Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases) and Win32 D3DX9. Close the game before installing.

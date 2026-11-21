@@ -13,13 +13,18 @@ REQUIRED = {"W2C-to-MW-Converter.exe", "_internal/bin/W2CMWPublic.asi",
             "_internal/bin/W2CMW-Rollback.exe", "_internal/base_library.zip",
             "_internal/camera-decoder/python312.zip", "_internal/importer-source/tools/sourceworld.lock.json"}
 BIN = {s for s in REQUIRED if s.startswith("_internal/bin/")}
-TOP = {"base_library.zip", "catalog.json", "rules.json", "translations.json", "compiler-identity.json"}
+TOP = {"base_library.zip", "catalog.json", "rules.json", "translations.json", "compiler-identity.json", "components-catalog.json"}
 TREES = {"assets", "camera-decoder", "importer-source", "presets", "_tcl_data", "_tk_data", "tcl8",
          "numpy", "numpy.libs", "numpy-2.4.3.dist-info", "scipy", "scipy.libs", "yaml", "PIL", "lz4"}
 BLOCKED = {".log", ".bun", ".moo", ".sav", ".lzc", ".ini", ".pdb"}
 
 def allowed(name):
     p = Path(name)
+    if name in {"optional/LBx64 W2CtoMW RC3.1.zip", "optional/README-LBx64.txt"}:
+        return True
+    if name.startswith("_internal/optional/"):
+        source = ROOT / "public-converter" / name.removeprefix("_internal/")
+        return source.is_file()
     if p.suffix.lower() in BLOCKED or "sourceworld.exe" in name.lower():
         return False
     if name == "W2C-to-MW-Converter.exe" or name in BIN:
@@ -57,6 +62,8 @@ def main():
         raise ValueError(f"Missing files: {REQUIRED - files.keys()}")
     files.update({s: ROOT / "public-converter" / s for s in ("QUICKSTART-JA.md", "QUICKSTART-EN.md")})
     files["THIRD_PARTY_NOTICES.md"] = ROOT / "THIRD_PARTY_NOTICES.md"
+    files["CHANGELOG-RC6-JA.md"] = ROOT / "CHANGELOG-RC6-JA.md"
+    files["CHANGELOG-RC6-EN.md"] = ROOT / "CHANGELOG-RC6-EN.md"
     files.update({f"notices/{f.name}": f for f in n.notices.iterdir() if f.is_file() and f.suffix == ".txt"})
     if not all("notices/" + x in files for x in ("NFSPluginSDK-LICENSE.txt", "LZ4-LICENSE.txt",
                "MinHook-LICENSE.txt", "Python-LICENSE.txt", "PyInstaller-COPYING.txt")):

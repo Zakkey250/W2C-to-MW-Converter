@@ -77,7 +77,8 @@ def import_native_mw(paths, output, work, **selection):
     config = work / (output.name + ".json")
     config.write_text(json.dumps({**selection, "files": [{"role": key, "path": str(path)}
                                                          for key, path in paths.items()]}), encoding="utf-8")
-    command = [BIN / "SourceWorld.exe"] if getattr(sys, "frozen", False) else ["dotnet", SOURCE_IMPORTER]
+    from setup_sourceworld import importer_command
+    command = importer_command()
     run([*command, "mw-target", config, output], work)
 
 

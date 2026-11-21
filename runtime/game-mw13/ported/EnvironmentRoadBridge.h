@@ -69,6 +69,9 @@ static void BindEnvironmentRoad(){
  for(unsigned sampler=2;sampler<=5;++sampler)device->SetTexture(sampler,nullptr);
  auto effect=EnvironmentEffect(1);
  if(!effect||!EnvironmentVector(effect,"cvRainParams",envRain))return;
+ // SunSet can publish these uniforms before the W2C main draw. Mask fresh
+ // drops using the current roof result and retain the accumulated wetness.
+ if(w2cSourceCovered)envRain[0]=0.f;
  if(!EnvironmentVector(effect,"cvSpecularColor",envSpecular))std::fill(std::begin(envSpecular),std::end(envSpecular),0.f);
  // WorldReflectShader uses its own live weather uniforms and the global
  // SunSet road-detail texture. Flat geometric normals lose that daylight

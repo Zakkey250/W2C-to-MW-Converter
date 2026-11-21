@@ -1,15 +1,69 @@
 #pragma once
+#include "../../format/GeometryAddon.h"
+#include "AuthoredPropsAddon.h"
+#include "../../format/RoadEnvironment.h"
+static w2road::Environment authoredGroundEnvironment;
 
 struct WorldClosureAddon {
  std::map<unsigned,std::set<unsigned>> draws;
  std::set<unsigned> props;
 };
 static WorldClosureAddon worldClosureAddon;
+static std::map<unsigned, w2geometry::Page> worldGeometryAddon;
+struct RockportCushions {
+ unsigned section=0, templateId=0;
+ std::string templateSha;
+ std::map<unsigned,std::array<float,7>> placements;
+};
+static RockportCushions rockportCushions;
+
+static RockportCushions ReadRockportCushions(const std::filesystem::path& path,
+    const std::string& collisionSha,const std::map<unsigned,w2geometry::Page>& geometry){
+ using namespace w2v2disk;
+ RockportCushions result;
+ File file(path);
+ const auto doc=parse(file.read(0,file.size,8192),8192);
+ keys(doc,{"schema","generation","collisionSha256","geometrySha256","section","template",
+           "templateSha256","placements"});
+ const auto schema=uintv(doc.at("schema"));
+ need((schema==1||schema==2)&&doc.at("generation")==v2Store.buildId&&
+      doc.at("collisionSha256")==collisionSha,"Rockport cushion collision identity");
+ result.section=unsigned(uintv(doc.at("section"),65535));
+ need(result.section==2015&&geometry.count(result.section),"Rockport cushion geometry section");
+ const auto& page=geometry.at(result.section);
+ need(doc.at("geometrySha256")==page.digest,"Rockport cushion geometry bytes");
+ result.templateId=unsigned(uintv(doc.at("template"),99999));
+ result.templateSha=str(doc.at("templateSha256"),64);
+ const auto bytes=page.Read();
+ auto drawOffset=r64(bytes,64);
+ const auto& rows=doc.at("placements");
+ need(rows.is_array()&&(schema==1?rows.size()==5:rows.size()<=5),"Rockport cushion placement count");
+ for(const auto& row:rows){
+  keys(row,{"draw","drawSha256","position","rotation"});
+  const unsigned id=unsigned(uintv(row.at("draw"),65535));
+  auto at=drawOffset+U(id)*sizeof(PageDraw);
+  need(id<page.summary.draws&&r32(bytes,at)==id&&
+       row.at("drawSha256")==sha(B(bytes.begin()+at,bytes.begin()+at+sizeof(PageDraw))),
+       "Rockport cushion draw identity");
+  const auto& q=row.at("rotation");
+  const auto& p=row.at("position");
+  need(q.is_array()&&q.size()==4&&p.is_array()&&p.size()==3,"Rockport cushion transform shape");
+  std::array<float,7> transform{};
+  double norm=0;
+  for(unsigned i=0;i<4;++i){auto v=number(q[i]);norm+=v*v;transform[i]=float(v);}
+  need(std::abs(norm-1.)<.001,"Rockport cushion rotation norm");
+  for(unsigned i=0;i<3;++i)transform[4+i]=float(number(p[i]));
+  need(transform[4]>-283&&transform[4]<-276&&transform[5]>94&&transform[5]<97&&
+       transform[6]>291&&transform[6]<299,"Rockport cushion transform bounds");
+  need(result.placements.emplace(id,transform).second,"duplicate Rockport cushion");
+ }
+ return result;
+}
 
 static WorldClosureAddon ReadWorldClosureAddon(const w2v2disk::J& patch){
  using namespace w2v2disk;
  WorldClosureAddon result;
- if(uintv(patch.at("schema"))!=2)return result;
+ if(uintv(patch.at("schema"))<2)return result;
  need(patch.at("generation")==v2Store.buildId,"closure addon generation");
  const auto& draws=patch.at("closureDraws");
  const auto& props=patch.at("closureProps");

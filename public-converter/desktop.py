@@ -49,7 +49,7 @@ class ConverterWindow:
     def __init__(self, root):
         self.root = root
         self.language = tk.StringVar(master=root, value=locale_label())
-        self.root.title("W2C to MW Converter 2.0.0")
+        self.root.title("W2C to MW 2.0.0 — Converter RC6")
         self.root.geometry("1060x725")
         self.root.minsize(960, 665)
         self.root.configure(bg=SURFACE)
@@ -57,6 +57,8 @@ class ConverterWindow:
         self.paths = {name: tk.StringVar() for name in ("w2c", "mw", "mw_reference", "carbon", "vault_tool", "output")}
         self.quality = tk.StringVar(value="NORMAL")
         self.auto_install = tk.BooleanVar()
+        self.install_addon = tk.BooleanVar()
+        self.install_lbx64 = tk.BooleanVar()
         self.cancellation = Event()
         self.events = Queue()
         self.busy = False
@@ -403,14 +405,18 @@ class ConverterWindow:
     def show_plan(self):
         if self.existing_package:
             description = tr('変換済みパックの配置先を確認してください。')
-        elif self.vault_tool:
+        elif self.vault_tool and self.carbon_source:
             description = tr('CarbonとW2C原本から、動く小物、パースートブレーカー、専用カメラを生成します。')
         else:
             description = tr('MW原本と一致する小物は接触で動きます。給油機はMWのモデルと爆発で代替し、Carbon固有の演出と専用カメラは省略します。')
-        self.page(3, tr('変更内容を確認'), description)
+        self.page(3, tr('変更内容を確認'), description, scroll=True)
         self.card(tr('ワールドマップとレーダー'), tr('W2C原本の輪郭地図を使用。'), tr('原本'))
-        self.card(tr('Carbon 資源と装飾'), self.carbon["detail"],
-                  tr('照合済み') if self.carbon.get("detected") else tr('W2C・MW原本'))
+        if self.existing_package:
+            self.card(f"{tr('変換済みパック')} · {self.selected_quality}",
+                      tr('ファイルとSHA-256を照合しました。'), tr('確認済み'))
+        else:
+            self.card(tr('Carbon 資源と装飾'), self.carbon["detail"],
+                      tr('照合済み') if self.carbon.get("detected") else tr('W2C・MW原本'))
         if self.warnings:
             details = "\n".join(f"{item['name']}　{item['detail']}" + (" " + ", ".join(item["missing"]) if item.get("missing") else "")
                                 for item in self.warnings)
@@ -426,6 +432,14 @@ class ConverterWindow:
                             state="normal" if self.can_install else "disabled").pack(anchor="w")
             self.label(self.content, tr('オフの場合は保存のみ。ゲームへ反映するには配置が必要です。'),
                        fg=MUTED, size=9).pack(anchor="w", pady=(3, 0))
+        ttk.Checkbutton(self.content, variable=self.install_addon,
+                        text=tr('Addonのインストール — W2C 未開通区間の暫定開通')).pack(anchor="w", pady=(12, 4))
+        ttk.Checkbutton(self.content, variable=self.install_lbx64,
+                        text=tr('LBx64 RC3.1をインストール')).pack(anchor="w", pady=(0, 4))
+        self.label(self.content, tr('未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。'),
+                   fg=MUTED, size=9, wraplength=650).pack(anchor="w")
+        self.label(self.content, tr('LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。'),
+                   fg=MUTED, size=9, wraplength=650).pack(anchor="w", pady=(4, 0))
         self.button(tr('戻る'), self.check, footer=True)
         self.button(tr('パックを配置') if self.existing_package else tr('ローカル変換を開始'),
                     self.begin, primary=True, footer=True)
@@ -507,7 +521,9 @@ class ConverterWindow:
         bar.pack(fill="x")
         bar.start(14)
         language = self.language.get()
-        self.run(lambda: install(self.output, self.target, language=language, mw_reference=self.mw_reference),
+        addon, lbx64 = self.install_addon.get(), self.install_lbx64.get()
+        self.run(lambda: install(self.output, self.target, language=language, mw_reference=self.mw_reference,
+                                 addon=addon, lbx64=lbx64),
                  lambda _: self.complete(installed=True),
                  lambda: self.complete(placement_failed=True))
 

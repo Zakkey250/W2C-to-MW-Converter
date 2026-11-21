@@ -15,6 +15,7 @@ static void V2RefreshStatus(){
  if(!worldLogEnabled)return;auto& s=W2V2Status;s.flags=1|(v2DeviceHooks?2:0)|(loaderActive?4:0)|(v2Lost?8:0)|16;s.owner=v2OwnerThread;s.world=unsigned(v2WorldEpoch.load());s.device=unsigned(v2DeviceEpoch.load());s.failures=v2Failures.load();s.stale=v2StaleDrops.load();s.published=v2Published;s.readBytes=v2ReadBudget.used();s.readPeak=v2ReadBudget.peak();s.stageBytes=v2StageBudget.used();s.stagePeak=v2StageBudget.peak();s.metadataBytes=v2MetadataBudget.used();s.geometryBytes=v2GeometryBudget.used();s.textureBytes=v2TextureBudget.used();
 }
 static HRESULT STDMETHODCALLTYPE V2Present(IDirect3DDevice9* self,const RECT* source,const RECT* destination,HWND window,const RGNDATA* dirty){
+ geometryWorkMs=textureWorkMs=0;
  if(renderWorkProfiling)V2ObservePresentBegin();
  if(worldLogEnabled){W2V2Status.maximumGeometryBytesPerFrame=std::max(W2V2Status.maximumGeometryBytesPerFrame,v2UploadBytes);++W2V2Status.presentFrames;}v2UploadBytes=0;v2UploadStarted=0;v2TextureUploadBytes=0;v2TextureUploadStarted=0;
 #ifdef W2C_PUBLIC_BUILD

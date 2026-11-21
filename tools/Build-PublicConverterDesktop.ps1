@@ -34,7 +34,8 @@ $rollbackArgs=@(
     '--distpath',$rollbackDir,'--workpath',(Join-Path $build 'pyinstaller-rollback'),'--specpath',$build,
     '--exclude-module','build_world','--exclude-module','pursuit',
     '--add-data',"$rules;.",'--add-data',"$desktop/catalog.json;.",
-    '--add-data',"$desktop/translations.json;."
+    '--add-data',"$desktop/translations.json;.",
+    '--add-data',"$desktop/components-catalog.json;."
 )
 & $python -m PyInstaller @rollbackArgs (Join-Path $desktop 'rollback_app.py')
 if($LASTEXITCODE){throw 'Unable to build the standalone rollback executable'}
@@ -70,6 +71,7 @@ foreach($path in @($repacker,$vault,$rules,(Join-Path $desktop 'catalog.json'),(
 [System.IO.File]::WriteAllText($identity, ($rows | ConvertTo-Json))
 
 $data=@(
+    "$desktop/components-catalog.json;.", "$desktop/optional/AddOn;optional/AddOn",
     "$desktop/catalog.json;.", "$desktop/translations.json;.", "$rules;.", "$identity;.",
     "$desktop/assets/radio-selected.png;assets", "$desktop/assets/radio-unselected.png;assets",
     "$desktop/assets/world-city-coverage.w2g;assets",
@@ -95,3 +97,6 @@ foreach($entry in $data){$args+=@('--add-data',$entry)}
 if($LASTEXITCODE){throw 'Unable to build the portable converter'}
 & $python (Join-Path $PSScriptRoot 'build_public_camera_decoder.py') (Join-Path $build 'python-3.12.9-embed-amd64.zip') (Join-Path $build 'portable/W2C-to-MW-Converter/_internal/camera-decoder')
 if($LASTEXITCODE){throw 'Unable to stage the isolated camera decoder'}
+$optional=Join-Path $build 'portable/W2C-to-MW-Converter/optional'
+New-Item -ItemType Directory -Path $optional -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $desktop 'optional/LBx64/LBx64 W2CtoMW RC3.1.zip'),(Join-Path $desktop 'optional/LBx64/README-LBx64.txt') -Destination $optional -Force

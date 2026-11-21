@@ -295,7 +295,8 @@ def assemble_world(work, w2c, quality, mw, package, *, mw_reference=None, target
         compiled = json.loads(Path(__file__).with_name("compiler-identity.json").read_bytes())
         if any(compiled.get(name) != digest for name, digest in identities.items()):
             raise ValueError("The packaged converter components do not match their build identity.")
-        identities = {**compiled, 'SourceWorld.exe': file_digest(Path(__file__).with_name('bin') / 'SourceWorld.exe')}
+        from setup_sourceworld import importer_command
+        identities = {**compiled, 'SourceWorld.exe': file_digest(Path(importer_command()[-1]))}
     else:
         identities[Path(__file__).name] = file_digest(Path(__file__))
         identities["palmont_districts.py"] = file_digest(Path(__file__).with_name("palmont_districts.py"))

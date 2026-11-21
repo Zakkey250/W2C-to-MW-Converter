@@ -26,14 +26,52 @@ static bool V2InitializePacks(){try{
   const auto path=std::filesystem::path(root)/"W2CMWPublic"/"AddOns"/"collision.json";
   if(std::filesystem::exists(path)){
    w2v2disk::File file(path);
-   const auto patch=w2v2disk::parse(file.read(0,file.size,4*w2v2disk::MiB),4*w2v2disk::MiB);
+   const auto patchBytes=file.read(0,file.size,w2collision::MaxManifestBytes);
+   const auto patch=w2v2disk::parse(patchBytes,w2collision::MaxManifestBytes);
    auto closures=ReadWorldClosureAddon(patch);
-   bytes=w2collision::apply(bytes,patch,sourcePublicBuild);
+   const auto authoredPath=path.parent_path()/"authored-props.json";
+   auto authored=std::filesystem::exists(authoredPath)?ReadAuthoredProps(authoredPath,w2v2disk::sha(patchBytes)):std::vector<AuthoredPropPlacement>{};
+   auto geometry=w2geometry::read(patch,path.parent_path(),w2v2disk::sha(v2CachedMaterials),
+                                  [](unsigned section){return v2Store.page(section).sha;});
+   for(const auto& [section,page]:geometry)
+    w2v2disk::need(sections.count(section)&&!closures.draws.count(section),"geometry addon page conflicts with closure draws");
+   auto merged=w2collision::apply(bytes,patch,sourcePublicBuild);
+   auto roadEnvironment=w2road::read(path.parent_path()/"road-environment.json",sourcePublicBuild,w2v2disk::sha(patchBytes));
+   auto groundEnvironment=w2road::read(path.parent_path()/"authored-ground.json",sourcePublicBuild,w2v2disk::sha(patchBytes));
+   if(worldLogEnabled&&!roadEnvironment.volumes.empty())Log("ROAD_ENVIRONMENT_ACTIVE volumes=%u",unsigned(roadEnvironment.volumes.size()));
+   authoredRoadEnvironment=std::move(roadEnvironment);
+   try {
+    const auto lightPath=path.parent_path()/"tunnel-lights.json";
+    if(std::filesystem::exists(lightPath))
+     tunnelAddonLights=ReadTunnelAddonLights(lightPath,sourcePublicBuild,w2v2disk::sha(patchBytes),geometry);
+   } catch(const std::exception& error) {
+    if(worldLogEnabled)Log("WORLD_TUNNEL_ADDON_LIGHTS_REFUSED reason=%s",error.what());
+   }
+   try {
+    const auto propsPath=path.parent_path()/"rockport-cushions.json";
+    if(std::filesystem::exists(propsPath))
+     rockportCushions=ReadRockportCushions(propsPath,w2v2disk::sha(patchBytes),geometry);
+   } catch(const std::exception& error) {
+    if(worldLogEnabled)Log("ROCKPORT_CUSHIONS_REFUSED reason=%s",error.what());
+   }
+   for(const auto& [section,page]:geometry){
+    auto& header=sections.at(section).header;
+    auto bounds=&header.minimum.x;
+    for(unsigned i=0;i<6;++i)bounds[i]=page.bounds[i];
+    header.meshes=page.summary.draws;header.vertices=page.summary.sourceVertices;header.indices=page.summary.indices;
+   }
+   bytes=std::move(merged);
    worldClosureAddon=std::move(closures);
+    authoredGroundEnvironment=std::move(groundEnvironment);
+    if(worldLogEnabled&&!authoredGroundEnvironment.volumes.empty())Log("AUTHORED_GROUND_ACTIVE triangles=%u bank_recovery=2.5",unsigned(authoredGroundEnvironment.volumes.size()));
+    authoredPropPlacements=std::move(authored);
+   worldGeometryAddon=std::move(geometry);
    collisionCount=w2v2disk::r32(bytes,8);
    Log("COLLISION_ADDON_ACTIVE walls=%u floor=%u",unsigned(patch["removeWalls"].size()),unsigned(patch["addFloor"].size()));
    if(worldLogEnabled&&!worldClosureAddon.draws.empty())
     Log("WORLD_CLOSURE_ADDON_ACTIVE sections=%u props=%u",unsigned(worldClosureAddon.draws.size()),unsigned(worldClosureAddon.props.size()));
+   if(worldLogEnabled&&!worldGeometryAddon.empty())
+    Log("WORLD_GEOMETRY_ADDON_ACTIVE pages=%u",unsigned(worldGeometryAddon.size()));
   }
  } catch(const std::exception& error) { Log("COLLISION_ADDON_REFUSED reason=%s",error.what()); }
 #endif

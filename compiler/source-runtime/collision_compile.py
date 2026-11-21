@@ -14,6 +14,10 @@ BUS_TERMINAL_RAMP_GROUP = 1007
 BUS_TERMINAL_RAMP_INSTANCE = '66617c5b304e9f5823982bb27b350533ccca0ea615a3b93c049233faa60d7eaf'
 BUS_TERMINAL_RAMP_ARTICLE = '42118fec2b08b0b2d2740d215d1610f60bf9280c37ab89491bde11af33c86a25'
 
+# The terrain compiler exports the normal season. W2C stores an alternate
+# snow topology in this scenery group, with otherwise enabled CARP instances.
+WINTER_SCENERY_KEY = '246874f1'
+
 def directory(p):
     marker=bytes(p[:128]).find(b'PRAC')
     if marker<0:raise ValueError('Collision CARP signature')
@@ -73,6 +77,7 @@ def inactive_barriers(master,scenes):
 
 def compile_collision(source_root,master_path,carbon_attributes,mw_attributes,destination,*,surface_policy=None,repair_bus_terminal=False):
     started=time.monotonic();bank=Container(source_root,'systems');scenes=Container(source_root,'scenes');master=Path(master_path).read_bytes();defs,inactive=inactive_barriers(master,scenes)
+    winter_groups = {number for number, definition in defs.items() if definition['key'] == WINTER_SCENERY_KEY}
     arrays=[];surfaces=[];kinds=[];stats=Counter()
     for key,row in bank.entries.items():
         if row['metadata']['origin']['chunk']!='0003b801':continue
@@ -85,6 +90,7 @@ def compile_collision(source_root,master_path,carbon_attributes,mw_attributes,de
                 if group and group not in defs:raise ValueError('Unknown original collision group')
                 if article not in geometries or np.max(np.abs(inv@inv.T-np.eye(3)))>=.015:raise ValueError('Collision article/rigid basis')
                 if flag&6:stats['dynamicOrDisabledInstances']+=1;continue
+                if group in winter_groups:stats['inactiveWinterInstances']+=1;continue
                 if group in inactive:stats['inactiveBarrierInstances']+=1;continue
                 tri,ids,ff,walls,wids=geometries[article]
                 if (repair_bus_terminal and group==BUS_TERMINAL_RAMP_GROUP
@@ -151,7 +157,7 @@ def compile_collision(source_root,master_path,carbon_attributes,mw_attributes,de
         for name in names:f.write(name.encode('ascii').ljust(80,b'\0'))
         for node in nodes:f.write(struct.pack('<6f2I',*node))
         f.write(records.tobytes())
-    report=dict(source='Original X360 CARP only',triangles=len(points),nodes=len(nodes),surfaces=names,surfaceMapping={f'{h:08x}':v for h,v in surface_map.items()},unresolvedOriginalWallHashesUsingNativeConcrete=unresolved_wall_materials,statistics=dict(stats),inactiveBarrierGroups=sorted(inactive),sha256=hashlib.sha256(destination.read_bytes()).hexdigest(),bytes=destination.stat().st_size,seconds=time.monotonic()-started,oldConvertedCollisionRead=False)
+    report=dict(source='Original W2C CARP only',triangles=len(points),nodes=len(nodes),surfaces=names,surfaceMapping={f'{h:08x}':v for h,v in surface_map.items()},unresolvedOriginalWallHashesUsingNativeConcrete=unresolved_wall_materials,statistics=dict(stats),inactiveBarrierGroups=sorted(inactive),inactiveWinterGroups=sorted(winter_groups),sha256=hashlib.sha256(destination.read_bytes()).hexdigest(),bytes=destination.stat().st_size,seconds=time.monotonic()-started,oldConvertedCollisionRead=False)
     destination.with_suffix('.json').write_text(json.dumps(report,indent=2),encoding='utf-8');return report
 
 if __name__=='__main__':print(json.dumps(compile_collision(*sys.argv[1:]),indent=2))

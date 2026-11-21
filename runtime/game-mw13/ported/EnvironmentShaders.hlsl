@@ -20,6 +20,7 @@ float4 LocalSettings:register(c84);
 float4 Rain:register(c85);float4 RoadSettings:register(c86);float4 Specular:register(c87);
 float4 RoadDetailSettings:register(c88);float4 RoadDiffuse:register(c89);float4 RoadAmbient:register(c90);
 row_major float4x4 ShadowClip:register(c91);float4 ShadowSettings:register(c95);
+float4 VisibilityOpacity:register(c96);
 sampler2D WorldShadow:register(s6);
 float4 PSShadow(SO i):COLOR {return lerp(float4(1,1,1,1),float4(1,1,1,tex2D(Base,i.uv).a*i.c.a),Diffuse.x);}
 float ShadowAt(float2 uv,float biased){if(ShadowSettings.y>0){float depth=tex2Dlod(WorldShadow,float4(uv,0,0)).r;return biased<=depth?1:0;}return tex2Dproj(WorldShadow,float4(uv,biased,1)).r;}
@@ -47,6 +48,20 @@ float WorldVisibility(float3 position,float ndotl){
  return saturate(shadow+1-saturate((uv.y+.3)*2));
 }
 float4 PSDepth(DO i):COLOR {return float4(i.depth,i.depth,i.depth,tex2D(Base,i.uv).a*i.c.a);}
+// R32F stores red. This entry point is only used with alpha testing and blending disabled.
+float4 PSOpaqueDepth(DO i):COLOR {return i.depth.xxxx;}
+// Ordered 4x4 coverage keeps the depth write and alpha test of each material.
+void ClipVisibility(float2 pixel){
+ float2 low=frac(floor(pixel)*.5)*2;
+ float2 high=frac(floor(pixel*.5)*.5)*2;
+ float lowRank=2*abs(low.x-low.y)+low.y;
+ float highRank=2*abs(high.x-high.y)+high.y;
+ clip(VisibilityOpacity.x-(lowRank*4+highRank+.5)/16);
+}
+float4 PSDepthVisibility(DO i,float2 pixel:VPOS):COLOR {
+ ClipVisibility(pixel);
+ return PSDepth(i);
+}
 float4 PS(PO i):COLOR {float4 tex=tex2D(Base,i.uv);float3 color;float2 roadDx=ddx(i.world.xy*.6),roadDy=ddy(i.world.xy*.6);
 if(Settings.x>0&&Settings.y>0){color=tex.rgb*Emission.rgb*Emission.w*lerp(1,i.c.rgb,Settings.z);}
 else {float3 n=normalize(i.n);
@@ -100,6 +115,12 @@ if(Signal.w>=0){float lens=1-smoothstep(Signal.z-.008,Signal.z,length(frac(i.uv)
 float distance=length(i.world-Eye.xyz);float fog=pow(1-saturate((FogValue.x-distance)*FogValue.y),max(.01,FogValue.w))*FogValue.z;
 if(Settings.w<.5)color=lerp(color,lerp(Fog.rgb,FogSun.rgb,smoothstep(.3,1,dot(normalize(i.world-Eye.xyz),Sun.xyz))),saturate(fog));
 color=color/(1+max(color,0));return float4(color,tex.a*i.c.a);}
+
+float4 PSVisibility(PO i,float2 pixel:VPOS):COLOR {
+ float4 shaded=PS(i);
+ ClipVisibility(pixel);
+ return shaded;
+}
 
 // Converted props previously wrote uncompressed colours into SunSet's HDR
 // scene/cubemap. A sample near 1 decoded to arbitrarily bright car reflections.

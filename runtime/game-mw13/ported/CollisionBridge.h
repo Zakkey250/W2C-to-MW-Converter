@@ -1,4 +1,5 @@
 #pragma once
+#include "LowKerbPolicy.h"
 #include "CollisionWorld.h"
 #include "../../integration/MWRaceBarrierPolicy.h"
 namespace w2mw {
@@ -23,7 +24,11 @@ static bool groundLayerReuseCorrection=true;
 static bool GroundContactDiagnosticPoint(const Vec3& point){return (point.x>-3820.f&&point.x<-3700.f&&point.z>710.f&&point.z<830.f)||(point.x>-220.f&&point.x<-200.f&&point.z>1900.f&&point.z<1915.f);}
 static void* Surface(const CollisionTriangle& t){if(surfaceCollections.size()!=collision.surfaces.size())surfaceCollections.resize(collision.surfaces.size());auto& ref=surfaceCollections[t.surface];if(!ref){auto hash=reinterpret_cast<unsigned(__cdecl*)(const char*)>(0x5CC240);auto lookup=reinterpret_cast<void*(__cdecl*)(unsigned,unsigned)>(0x455FD0);ref=lookup(hash("simsurface"),hash(collision.surfaces[t.surface].data()));if(!ref)ref=lookup(hash("simsurface"),hash("asphalt_no_leaves"));}return ref;}
 static void FillFace(void* destination,const RayHit& hit){const auto& t=collision.triangles[hit.triangle];auto out=static_cast<NativeFace*>(destination);*out={t.p[0],0,t.p[1],2,t.p[2],0};if(!t.wall&&Cross(Sub(out->p1,out->p0),Sub(out->p2,out->p0)).y<0)std::swap(out->p1,out->p2);}
-static bool __fastcall NativeGround(void* self,void*,void*,const Vec3* point){NativeCollisionWorkTimer timing;if(!point)return false;auto flags=reinterpret_cast<unsigned*>(static_cast<BYTE*>(self)+48);*flags&=~1u;float offset=*reinterpret_cast<float*>(static_cast<BYTE*>(self)+52);if(!std::isfinite(offset)||std::abs(offset)>100)offset=0;RayHit hit;float originY=point->y+std::max(groundRayUpwardTolerance,offset);bool result=collision.Ray({point->x,originY,point->z},{point->x,point->y-1000,point->z},hit,true);if(result){FillFace(self,hit);*flags|=1;*reinterpret_cast<void**>(static_cast<BYTE*>(self)+56)=Surface(collision.triangles[hit.triangle]);}++groundQueries;if(groundContactDiagnostics&&GroundContactDiagnosticPoint(*point)){static DWORD previous=0;DWORD now=GetTickCount();if(now-previous>=100){previous=now;Log("GROUND_CONTACT_RAY at=%.4f,%.4f,%.4f origin_y=%.4f offset=%.4f hit=%u triangle=%u floor_y=%.4f",point->x,point->y,point->z,originY,offset,result?1u:0u,hit.triangle,result?hit.point.y:0.f);}}return result;}
+static bool __fastcall NativeGround(void* self,void*,void*,const Vec3* point){NativeCollisionWorkTimer timing;if(!point)return false;auto flags=reinterpret_cast<unsigned*>(static_cast<BYTE*>(self)+48);*flags&=~1u;float offset=*reinterpret_cast<float*>(static_cast<BYTE*>(self)+52);if(!std::isfinite(offset)||std::abs(offset)>100)offset=0;RayHit hit;float originY=point->y+std::max(groundRayUpwardTolerance,offset);
+#ifdef W2C_PUBLIC_BUILD
+ originY=authoredGroundEnvironment.groundOrigin({point->z,-point->x,point->y},originY);
+#endif
+ bool result=collision.Ray({point->x,originY,point->z},{point->x,point->y-1000,point->z},hit,true);if(result){FillFace(self,hit);*flags|=1;*reinterpret_cast<void**>(static_cast<BYTE*>(self)+56)=Surface(collision.triangles[hit.triangle]);}++groundQueries;if(groundContactDiagnostics&&GroundContactDiagnosticPoint(*point)){static DWORD previous=0;DWORD now=GetTickCount();if(now-previous>=100){previous=now;Log("GROUND_CONTACT_RAY at=%.4f,%.4f,%.4f origin_y=%.4f offset=%.4f hit=%u triangle=%u floor_y=%.4f",point->x,point->y,point->z,originY,offset,result?1u:0u,hit.triangle,result?hit.point.y:0.f);}}return result;}
 static bool __fastcall NativeWorldRay(void* self,void*,void*,const Vec3* from,const Vec3* to){NativeCollisionWorkTimer timing;if(!from||!to)return false;RayHit hit;bool result=collision.Ray(*from,*to,hit);auto flags=reinterpret_cast<unsigned*>(static_cast<BYTE*>(self)+48);*flags&=~1u;if(result){FillFace(self,hit);*flags|=1;*reinterpret_cast<void**>(static_cast<BYTE*>(self)+56)=Surface(collision.triangles[hit.triangle]);}++groundQueries;return result;}
 static bool __fastcall NativeGroundDispatch(void* self,void*,void* cache,const Vec3* point,unsigned){bool result=NativeGround(self,nullptr,cache,point);if(groundQueries<9)Log("GROUND_NATIVE hit=%u at=%.3f,%.3f,%.3f surface=%p",result,point->x,point->y,point->z,*reinterpret_cast<void**>(static_cast<BYTE*>(self)+56));return true;}
 // The public world owns static collision even when optional props are absent.
@@ -104,7 +109,11 @@ static void __fastcall NativeCollisionLists(void* self,void*,unsigned flags){Nat
  static unsigned traces=0;if(traces++<8)Log("PROP_GROUND_NATIVE instances=%u at=%.3f,%.3f,%.3f format=carp64+strip",unsigned(cache.floors.size()),center.x,center.y,center.z);
  collision.QueryBox({center.x-radius,center.y-4,center.z-radius},{center.x+radius,center.y+4,center.z+radius},cache.candidates,true);
  }else if(!propPolygonBridge){*reinterpret_cast<void**>(data+64)=nullptr;*reinterpret_cast<void**>(data+68)=nullptr;}
- for(unsigned id:cache.candidates){const auto& t=collision.triangles[id];unsigned first=0;float best=-1;for(unsigned n=0;n<3;++n){auto a=t.p[n],b=t.p[(n+2)%3];float d=(a.x-b.x)*(a.x-b.x)+(a.z-b.z)*(a.z-b.z);if(d>best){best=d;first=n;}}if(best<1e-10f)continue;Vec3 a=t.p[first],b=t.p[(first+2)%3];float bottom=std::min({t.p[0].y,t.p[1].y,t.p[2].y}),top=std::max({t.p[0].y,t.p[1].y,t.p[2].y})-.25f;if(top<=bottom||center.y+4<bottom||center.y-4>top)continue;a.y=bottom;b.y=top;cache.walls.push_back({a,512,b,1/std::sqrt(best),{0,0}});}
+ for(unsigned id:cache.candidates){const auto& t=collision.triangles[id];NativeWallGeometry span;
+ if(!ClipNativeWall(t,center.y-4,center.y+4,span))continue;
+ Vec3 a{span.a.x,span.bottom,span.a.z},b{span.b.x,span.top,span.b.z};
+ cache.walls.push_back({a,512,b,1/std::sqrt(span.lengthSquared),{0,0}});}
+
  const size_t worldWallCount=cache.walls.size();
  if(eventBarrierCollision)eventBarrierCollision(center,radius,cache.walls);
  AppendExternalEventContacts(center,radius,cache.walls);
@@ -190,10 +199,14 @@ static bool __fastcall NativeVisualGround(void* self,void*,void* cache,const Vec
 }
 static bool NearbyUpperGround(const Vec3* point,float previousY,RayHit& candidate){
  if(!point||!std::isfinite(point->y)||point->y-previousY<1.2f)return false;
- const Vec3 from{point->x,point->y+groundRayUpwardTolerance,point->z},to{point->x,point->y-3.f,point->z};
+ float origin=point->y+groundRayUpwardTolerance;
+#ifdef W2C_PUBLIC_BUILD
+ origin=authoredGroundEnvironment.groundOrigin({point->z,-point->x,point->y},origin);
+#endif
+ const Vec3 from{point->x,origin,point->z},to{point->x,point->y-3.f,point->z};
  if(!collision.Ray(from,to,candidate,true))return false;
  const float difference=point->y-candidate.point.y;
- return candidate.point.y>previousY+.5f&&difference>=-groundRayUpwardTolerance&&difference<=1.5f;
+ return candidate.point.y>previousY+.5f&&difference>=-(origin-point->y)&&difference<=1.5f;
 }
 static bool __fastcall TraceContactGround(void* self,void*,const Vec3* point,float* normal,unsigned reuse,void* cache,unsigned fallback){
  RayHit candidate{};float previousY=0;

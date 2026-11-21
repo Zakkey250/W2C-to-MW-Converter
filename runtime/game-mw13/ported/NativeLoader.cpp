@@ -1,4 +1,5 @@
 #include <windows.h>
+#include "../../core/ProcessTermination.h"
 #include <d3d9.h>
 #include <MinHook.h>
 #include <cstdio>
@@ -18,6 +19,7 @@
 #pragma comment(lib,"Advapi32.lib")
 #include <chrono>
 #include <array>
+#include <bit>
 #include <intrin.h>
 #include <utility>
 #include <cctype>
@@ -59,12 +61,29 @@ struct ShadowIndexSpan {unsigned owner,firstIndex,indexCount;};
 struct CpuSection {w2v2::Lease stage;Header header;std::vector<Mesh> meshes;std::vector<Vertex> vertices;std::vector<uint32_t> indices;std::vector<NormalColor> normals;std::vector<EnvironmentVertex> gpuVertices;std::vector<EnvironmentMeshLights> lights;std::vector<unsigned> triangleOverlap,meshOverlap,shadowIndices;std::vector<ShadowIndexSpan> shadowSpans;std::array<std::vector<unsigned>,2> drawMeshes;};
 struct Section {std::shared_ptr<PageGpu> page;w2v2::Lease gpuLease;Header header{};IDirect3DVertexBuffer9* vb=nullptr;IDirect3DIndexBuffer9* ib=nullptr;std::vector<Mesh> meshes;std::vector<EnvironmentMeshLights> lights;std::vector<unsigned> meshOverlap;std::vector<ShadowIndexSpan> shadowSpans;std::array<std::vector<unsigned>,2> drawMeshes;IDirect3DIndexBuffer9* shadowIB=nullptr;unsigned shadowIndices=0;bool queued=false;DWORD used=0;uint64_t bytes=0;};
 struct Ready {unsigned id;std::unique_ptr<CpuSection> data;double ms;w2v2::Epoch epoch;};
-struct TextureData {unsigned hash;std::vector<BYTE> bytes;w2v2::Lease stage;w2v2::Epoch epoch;bool full=false;};
+struct TextureData {
+ unsigned hash;
+ std::vector<BYTE> bytes;
+ w2v2::Lease stage;
+ w2v2::Epoch epoch;
+ bool full=false;
+ std::unique_ptr<w2c_resident::View> resident;
+ std::span<const BYTE> pixels()const{return resident?resident->span():std::span<const BYTE>(bytes);}
+};
 struct Zone {unsigned id;std::vector<Vec3> boundary;std::set<unsigned> sections;Vec3 low{FLT_MAX,FLT_MAX,0},high{-FLT_MAX,-FLT_MAX,0};};
 static std::map<unsigned,Section> sections;static std::map<unsigned,Material> materials;
 // Materials are immutable once streaming starts. Missing entries use the same
 // default as before, without inserting into a map read by CPU workers.
-static Material MaterialOf(unsigned hash){const auto& table=materials;auto it=table.find(hash);return it==table.end()?Material{}:it->second;}
+#include "TerrainBindings.h"
+static Material MaterialOf(unsigned hash){
+ auto* cache=TerrainLookup::current;
+ auto* entry=cache?&cache->materials[TerrainLookup::slot(hash)]:nullptr;
+ if(entry&&entry->known&&entry->key==hash)return entry->value;
+ auto it=materials.find(hash);
+ const auto value=it==materials.end()?Material{}:it->second;
+ if(entry)*entry={hash,value,true};
+ return value;
+}
 #include "MeshDrawLists.h"
 #include "ShadowIndexBatches.h"
 static std::map<unsigned,IDirect3DTexture9*> textures;static std::vector<Zone> zones;
@@ -228,9 +247,28 @@ static void ReadStreamJob(StreamJob job,unsigned id,w2v2::Epoch requestEpoch){
 #ifndef W2C_PUBLIC_BUILD
    previous=previous_barrier_appearance::Find(id);
 #endif
-   auto bytes=previous?previous->size():entry->bytes;w2v2disk::need(bytes>=128&&bytes<=16ull*1048576,"bounded texture source");w2v2::Lease input(v2ReadBudget,bytes),stage(v2StageBudget,bytes);
-   if(!input||!stage){++v2BudgetWaits;{std::lock_guard lock(ioMutex);if(requestEpoch==V2Epoch())texturePending.emplace_back(id,requestEpoch);}Sleep(2);return;}
-   result.bytes=previous?*previous:v2Store.read(*entry);result.stage=std::move(stage);
+   const auto bytes=previous?previous->size():entry->bytes;
+   w2v2disk::need(bytes>=128&&bytes<=16ull*1048576,"bounded texture source");
+   const auto defer=[&](){++v2BudgetWaits;{std::lock_guard lock(ioMutex);if(requestEpoch==V2Epoch())texturePending.emplace_back(id,requestEpoch);}Sleep(2);};
+   result.stage=w2v2::Lease(v2StageBudget,bytes);
+   if(!result.stage){defer();return;}
+   static const bool useViews=[]{
+    char option[8]{};
+    GetPrivateProfileStringA("Streaming","ResidentTextureViews","1",option,sizeof(option),Path("W2CMWv2.ini").c_str());
+    return !strcmp(option,"1");
+   }();
+   if(useViews&&!previous){
+    auto view=w2c_resident::reader().map(v2Store.buildId,w2c_resident::kTexture,id,entry->sha);
+    if(view&&view.span().size()==bytes)result.resident=std::make_unique<w2c_resident::View>(std::move(view));
+   }
+   if(!result.resident){
+    w2v2::Lease input(v2ReadBudget,bytes);
+    if(!input){defer();return;}
+    result.bytes=previous?*previous:v2Store.read(*entry);
+   }else if(worldLogEnabled){
+    static std::atomic<bool> reported{};
+    if(!reported.exchange(true,std::memory_order_relaxed))Log("W2C_RESIDENT_TEXTURE_ACTIVE hash=%08X bytes=%u generation_matched=1",id,unsigned(bytes));
+   }
   }catch(const std::exception& error){++v2Failures;Log("V2_TEXTURE_REFUSED hash=%08X reason=%s",id,error.what());}
   // Cancellation already removed the old request. A current request for the
   // same hash may have been queued while this read was in flight.
@@ -280,9 +318,10 @@ static bool StartStreaming(){
 
 static bool Inside(const Zone& zone,float x,float y){bool inside=false;size_t j=zone.boundary.size()-1;for(size_t i=0;i<zone.boundary.size();j=i++){auto a=zone.boundary[i],b=zone.boundary[j];if((a.y>y)!=(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)inside=!inside;}return inside;}
 static float Distance(const Header& h,Vec3 p){float x=std::max({h.minimum.x-p.x,0.f,p.x-h.maximum.x}),y=std::max({h.minimum.y-p.y,0.f,p.y-h.maximum.y});return x*x+y*y;}
+#include "TerrainVisibility.h"
+static bool initialWorldHold=false;
 #include "PagedStreaming.h"
 static void Select(){V2Select();}
-static bool initialWorldHold=false;
 static bool Upload(CpuSection& data,Section& section){auto& h=data.header;IDirect3DVertexBuffer9* vb=nullptr;IDirect3DIndexBuffer9* ib=nullptr;void* buffer=nullptr;
  bool hasNormals=environmentInstalled&&data.normals.size()==h.vertices;
  unsigned stride=hasNormals?sizeof(EnvironmentVertex):sizeof(Vertex);
@@ -313,7 +352,18 @@ if(!v2UploadStarted)v2UploadStarted=Clock();V2PumpTerrain(loading);
  bool live=race&&*reinterpret_cast<unsigned*>(race+0x1960)==1&&race[0x198A]&&race[0x1978];
  if(!V2PumpTextures(loading&&!live))W2V2Status.error=4;
 }
-static IDirect3DTexture9* Texture(unsigned hash){if(!hash||v2Store.originalUnavailableTexture(hash))return nullptr;auto it=textures.find(hash);if(it!=textures.end()&&it->second){textureUsed[hash]=GetTickCount();return it->second;}
+static IDirect3DTexture9* Texture(unsigned hash){
+ if(!hash)return nullptr;
+ auto* cache=TerrainLookup::current;
+ auto* entry=cache?&cache->textures[TerrainLookup::slot(hash)]:nullptr;
+ if(entry&&entry->key==hash){*entry->lastUse=GetTickCount();return entry->texture;}
+ if(v2Store.originalUnavailableTexture(hash))return nullptr;
+ auto it=textures.find(hash);
+ if(it!=textures.end()&&it->second){
+  auto& used=textureUsed[hash];used=GetTickCount();
+  if(entry)*entry={hash,it->second,&used};
+  return it->second;
+ }
  std::lock_guard lock(ioMutex);if(!textureRequested.count(hash)&&V2RequestRoom()){textureRequested.insert(hash);texturePending.push_back(hash);ioSignal.notify_all();}return nullptr;
 }
 static void TrimTextures(){
@@ -322,6 +372,7 @@ static void TrimTextures(){
   const auto hash=it->first;
   const auto age=now-textureUsed[hash];
   if(!it->second||v2TexturePins.count(hash)||age<=5000||(textureResident<=384ull*1048576&&age<=15000)){++it;continue;}
+  TerrainLookup::invalidateTextures();
   it->second->Release();textureResident-=textureBytes[hash];v2TextureLeases.erase(hash);
   textureBytes.erase(hash);textureUsed.erase(hash);it=textures.erase(it);
   std::lock_guard lock(ioMutex);textureRequested.erase(hash);
@@ -347,12 +398,13 @@ static bool V2PageTexturesReady(const PageGpu& page){
  bool ready=true;for(auto hash:page.pins.keys)if(!Texture(hash))ready=false;return ready;
 }
 
-static void SetMaterial(unsigned hash){auto r=MaterialOf(hash);device->SetRenderState(D3DRS_DEPTHBIAS,0);device->SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS,0);device->SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);device->SetRenderState(D3DRS_ALPHATESTENABLE,r.usage==1||hash==0x57FC91B7);device->SetRenderState(D3DRS_ALPHAREF,hash==0x57FC91B7?64:11);device->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);device->SetRenderState(D3DRS_ALPHABLENDENABLE,(!envDepthPass&&r.blend!=0));device->SetRenderState(D3DRS_ZWRITEENABLE,envDepthPass||r.blend==0);device->SetRenderState(D3DRS_CULLMODE,(r.usage==1||r.blend||(r.flags&2))?D3DCULL_NONE:(envRoadReflectionPass?D3DCULL_CCW:D3DCULL_CW));
+template<class Target> static void ApplyTerrainMaterial(Target& target,unsigned hash){auto r=MaterialOf(hash);target.SetRenderState(D3DRS_DEPTHBIAS,0);target.SetRenderState(D3DRS_SLOPESCALEDEPTHBIAS,0);target.SetTextureStageState(0,D3DTSS_TEXTURETRANSFORMFLAGS,D3DTTFF_DISABLE);target.SetRenderState(D3DRS_ALPHATESTENABLE,r.usage==1||hash==0x57FC91B7);target.SetRenderState(D3DRS_ALPHAREF,hash==0x57FC91B7?64:11);target.SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER);target.SetRenderState(D3DRS_ALPHABLENDENABLE,(!envDepthPass&&r.blend!=0));target.SetRenderState(D3DRS_ZWRITEENABLE,envDepthPass||r.blend==0);target.SetRenderState(D3DRS_CULLMODE,(r.usage==1||r.blend||(r.flags&2))?D3DCULL_NONE:(envRoadReflectionPass?D3DCULL_CCW:D3DCULL_CW));
  DWORD src=D3DBLEND_ONE,dst=D3DBLEND_ZERO;switch(r.blend){case 1:case 4:src=D3DBLEND_SRCALPHA;dst=D3DBLEND_INVSRCALPHA;break;case 2:src=D3DBLEND_SRCALPHA;dst=D3DBLEND_ONE;break;case 3:src=D3DBLEND_ZERO;dst=D3DBLEND_INVSRCCOLOR;break;case 5:src=D3DBLEND_DESTALPHA;dst=D3DBLEND_INVDESTALPHA;break;case 6:src=D3DBLEND_DESTALPHA;dst=D3DBLEND_ONE;break;}
- device->SetRenderState(D3DRS_SRCBLEND,src);device->SetRenderState(D3DRS_DESTBLEND,dst);device->SetRenderState(D3DRS_BLENDOP,D3DBLENDOP_ADD);
- device->SetSamplerState(0,D3DSAMP_ADDRESSU,(r.tile&4)?D3DTADDRESS_MIRROR:((r.tile&1)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));device->SetSamplerState(0,D3DSAMP_ADDRESSV,(r.tile&8)?D3DTADDRESS_MIRROR:((r.tile&2)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));
- auto texture=Texture(hash);device->SetTexture(0,texture);device->SetTextureStageState(0,D3DTSS_COLOROP,texture?D3DTOP_MODULATE:D3DTOP_SELECTARG2);device->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);device->SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);device->SetTextureStageState(0,D3DTSS_ALPHAOP,texture?D3DTOP_MODULATE:D3DTOP_SELECTARG2);device->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);device->SetTextureStageState(0,D3DTSS_ALPHAARG2,D3DTA_DIFFUSE);
+ target.SetRenderState(D3DRS_SRCBLEND,src);target.SetRenderState(D3DRS_DESTBLEND,dst);target.SetRenderState(D3DRS_BLENDOP,D3DBLENDOP_ADD);
+ target.SetSamplerState(0,D3DSAMP_ADDRESSU,(r.tile&4)?D3DTADDRESS_MIRROR:((r.tile&1)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));target.SetSamplerState(0,D3DSAMP_ADDRESSV,(r.tile&8)?D3DTADDRESS_MIRROR:((r.tile&2)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));
+ auto texture=Texture(hash);target.SetTexture(0,texture);target.SetTextureStageState(0,D3DTSS_COLOROP,texture?D3DTOP_MODULATE:D3DTOP_SELECTARG2);target.SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);target.SetTextureStageState(0,D3DTSS_COLORARG2,D3DTA_DIFFUSE);target.SetTextureStageState(0,D3DTSS_ALPHAOP,texture?D3DTOP_MODULATE:D3DTOP_SELECTARG2);target.SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);target.SetTextureStageState(0,D3DTSS_ALPHAARG2,D3DTA_DIFFUSE);
 }
+static void SetMaterial(unsigned hash){ApplyTerrainMaterial(*device,hash);}
 static void SetWorldTextureFiltering(){
  // A preceding native pass may leave a positive mip bias or a coarse maximum
  // mip level. Establish our own sampler state inside the captured state block.
@@ -417,6 +469,7 @@ static void Render(void* targetView,unsigned){
 #include "RenderTransformState.h"
 #include "InitialWorldBindings.h"
 #include "InitialWorldGate.h"
+#include "TerrainPassCapture.h"
 static void RenderBody(void* targetView,unsigned drawFlags){
  const auto flow=InitialGameFlow();
  const bool nativeScenePlaying=IsNativeScenePlaying();
@@ -426,9 +479,15 @@ static void RenderBody(void* targetView,unsigned drawFlags){
  envDepthPass=mainView&&sceneTargetFormat==D3DFMT_R32F;
  if(mainView&&(envDepthPass||!envDepthFrameReady))WorldObserveFrame();
  const bool updateScene=mainView&&(envDepthPass||!envDepthFrameReady);if(mainView){if(envDepthPass)envDepthFrameReady=true;else envDepthFrameReady=false;}if(updateScene)++frameCounter;device=*reinterpret_cast<IDirect3DDevice9**>(0x982BDC);auto camera=*reinterpret_cast<BYTE**>(targetView);if(!device||!camera)return;
+ if(updateScene&&!editorStock&&W2MW_IsWorldActiveV1()){
+  W2CUpdateWeatherCover();
+  InstallW2CRainDraw();
+ }
  // Game eView stores world-to-view and projection matrices in render axes.
  D3DMATRIX view{},projection{},identity{};memcpy(&view,camera,64);memcpy(&projection,camera+0x40,64);identity._11=identity._22=identity._33=identity._44=1;
  Vec3 passPosition={-(view._41*view._11+view._42*view._12+view._43*view._13),-(view._41*view._21+view._42*view._22+view._43*view._23),-(view._41*view._31+view._42*view._32+view._43*view._33)};
+ D3DMATRIX clip{};for(unsigned row=0;row<4;++row)for(unsigned column=0;column<4;++column)for(unsigned k=0;k<4;++k)clip.m[row][column]+=view.m[row][k]*projection.m[k][column];
+ if(updateScene&&!editorStock)SetTerrainMainCamera(passPosition,clip);
  double selectMs=0,pumpMs=0,propsMs=0,stageStart=worldLogEnabled?Clock():0;
  if(updateScene&&!editorStock){ObserveInitialWorldCenter(passPosition);
  cameraPosition=initialWorldHold&&initialStable.centerSeen?InitialLoadFocus():passPosition;
@@ -444,7 +503,7 @@ static void RenderBody(void* targetView,unsigned drawFlags){
  auto propsScene=[&](){renderStage=3;double begin=worldLogEnabled?Clock():0;TickNativeProps();TickAmbientParticles();if(begin)propsMs+=Clock()-begin;};
  if(frameCounter&1){propsScene();pumpScene();}else{pumpScene();propsScene();}
 #endif
- }renderStage=4;D3DMATRIX clip{};for(unsigned row=0;row<4;++row)for(unsigned column=0;column<4;++column)for(unsigned k=0;k<4;++k)clip.m[row][column]+=view.m[row][k]*projection.m[k][column];
+ }renderStage=4;
 
  device->SetVertexShader(nullptr);device->SetPixelShader(nullptr);device->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1);device->SetTransform(D3DTS_WORLD,&identity);device->SetTransform(D3DTS_VIEW,&view);device->SetTransform(D3DTS_PROJECTION,&projection);
  device->SetRenderState(D3DRS_LIGHTING,FALSE);device->SetRenderState(D3DRS_ZENABLE,TRUE);device->SetRenderState(D3DRS_ZFUNC,D3DCMP_LESSEQUAL);device->SetRenderState(D3DRS_FOGENABLE,FALSE);device->SetTextureStageState(1,D3DTSS_COLOROP,D3DTOP_DISABLE);device->SetSamplerState(0,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);device->SetSamplerState(0,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);device->SetSamplerState(0,D3DSAMP_MIPFILTER,D3DTEXF_LINEAR);
@@ -453,13 +512,14 @@ static void RenderBody(void* targetView,unsigned drawFlags){
  if(environmentInstalled&&!environment){device->SetFVF(D3DFVF_XYZ|D3DFVF_NORMAL|D3DFVF_DIFFUSE|D3DFVF_TEX1);}
  // Authored cameras retain the same zone visibility as normal driving.
  // Resident preload sections are not all visible sections.
- const RenderFrustum frustum(clip);auto pageStats=DrawPagedTerrain(passPosition,frustum,clip,environment,reflection);unsigned drawn=pageStats.sections,meshCount=pageStats.meshes,drawCalls=pageStats.calls,nightLayersDrawn=pageStats.nightDrawn,nightLayersSkipped=pageStats.nightSkipped,overlapSkipped=pageStats.overlapSkipped;
+ const RenderFrustum frustum(clip);auto pageStats=DrawPagedTerrain(passPosition,frustum,clip,environment,reflection,mainView);unsigned drawn=pageStats.sections,meshCount=pageStats.meshes,drawCalls=pageStats.calls,nightLayersDrawn=pageStats.nightDrawn,nightLayersSkipped=pageStats.nightSkipped,overlapSkipped=pageStats.overlapSkipped;
  if(environment||(!envDepthPass&&environmentInstalled))DrawEnvironmentMotions(clip,environment);renderStage=5;if(!envDepthPass){device->SetVertexShader(nullptr);device->SetPixelShader(nullptr);device->SetFVF(D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1);}
 #ifndef W2C_PUBLIC_BUILD
  DrawNativeProps(clip);
 #endif
  if(!envDepthPass)DrawRaceBarriers(clip,passPosition,mainView);renderStage=6;++drawCounter;if(renderWorkProfiling){renderFrameSubmitMs+=Clock()-passStart;++renderFramePasses;}
  if(mainView&&!envDepthPass)ObserveInitialPresentationDraw(meshCount);
+ if(meshCount)CaptureTerrainPass(passPosition,clip);
  if(envRoadReflectionPass&&meshCount){envRoadReflectionReady=true;static DWORD reported=0;DWORD now=GetTickCount();if(worldLogEnabled&&now-reported>10000){reported=now;Log("ROAD_REFLECTION_WORLD meshes=%u resident_world=1 recursion=0",meshCount);}}
  if(reflection&&worldLogEnabled){static DWORD reported[6]{};DWORD now=GetTickCount();if(meshCount&&now-reported[viewId-18]>10000){reported[viewId-18]=now;Log("REFLECTION_WORLD face=%u meshes=%u eye=%.1f,%.1f,%.1f submit_ms=%.3f",viewId-18,meshCount,passPosition.x,passPosition.y,passPosition.z,Clock()-passStart);}}
  static double mainSubmitTotal=0,depthSubmitTotal=0;static unsigned mainSubmitCount=0,depthSubmitCount=0;
@@ -484,6 +544,9 @@ static void Render(void* targetView,unsigned flags){if(v2Lost)return;
  RenderTransformState transforms;transforms.Capture(dev);
  if(start)renderFrameStateMs+=Clock()-start;
  __try{RenderBody(targetView,flags);}__finally{
+  // Drain read-only page work before render recovery or resource retirement,
+  // including exceptions raised by an underlying D3D call.
+  pagedPrep.finish();
   double restore=renderWorkProfiling?Clock():0;
   if(!v2Lost){
    auto status=state->Apply();
@@ -573,7 +636,7 @@ extern "C" __declspec(dllexport) unsigned __cdecl W2CMWv2_SourceAssetsV1(){retur
 #ifndef W2C_PUBLIC_BUILD
 #include "SourceDeployment.h"
 #endif
-extern "C" __declspec(dllexport) void InitializeASI(){static bool done=false;if(done)return;done=true;GetModuleFileNameA(nullptr,root,MAX_PATH);auto end=strrchr(root,'\\');if(!end)return;end[1]=0;
+static void InitializeWorld(){static bool done=false;if(done)return;done=true;GetModuleFileNameA(nullptr,root,MAX_PATH);auto end=strrchr(root,'\\');if(!end)return;end[1]=0;
 #ifndef W2C_PUBLIC_BUILD
 bool editorEnabled=GetFileAttributesA(Path("MWEventEditor/runtime.json").c_str())!=INVALID_FILE_ATTRIBUTES;
 #ifndef MW_EDITOR_NATIVE_ONLY
@@ -583,6 +646,9 @@ if(!SourceDeploymentAllowed())return;
 #endif
  if(GetModuleHandleA("World2MWNativeLoader.asi")||GetModuleHandleA("AAA_World2MWProbe.asi"))return;
  QueryPerformanceFrequency(&frequency);InitWorldDebugLog(Path("W2CMWv2.ini").c_str(),Path("W2CMWv2.log").c_str());v2ReadBudget.measure(worldLogEnabled);v2StageBudget.measure(worldLogEnabled);v2MetadataBudget.measure(worldLogEnabled);v2GeometryBudget.measure(worldLogEnabled);v2TextureBudget.measure(worldLogEnabled);
+#ifndef MW_EDITOR_NATIVE_ONLY
+ LoadTerrainVisibilitySettings(Path("W2CMWv2.ini").c_str());
+#endif
  if(GetModuleHandleA(nullptr)!=reinterpret_cast<HMODULE>(0x400000)||!SupportedExe()){Log("REFUSED executable identity");return;}
 #ifdef W2C_PUBLIC_BUILD
  if(!SourceDeploymentAllowed())return;
@@ -649,7 +715,30 @@ if(!SourceDeploymentAllowed())return;
  if(!StartStreaming()){Log("REFUSED streaming worker");DWORD access;if(VirtualProtect(reinterpret_cast<void*>(0x7310B0),1,PAGE_EXECUTE_READWRITE,&access)){*reinterpret_cast<BYTE*>(0x7310B0)=0x51;VirtualProtect(reinterpret_cast<void*>(0x7310B0),1,access,&access);FlushInstructionCache(GetCurrentProcess(),reinterpret_cast<void*>(0x7310B0),1);}UninstallNativeCollision();MH_DisableHook(draw);MH_RemoveHook(draw);return;}loaderActive=true;W2V2Status.flags|=4;Log("ACTIVE custom renderer sections=%u materials=%u zones=%u legacy_collision=0; runtime FBX parsing disabled",unsigned(sections.size()),unsigned(materials.size()),unsigned(zones.size()));
 #endif
 }
-BOOL APIENTRY DllMain(HMODULE module,DWORD reason,LPVOID reserved){if(reason==DLL_PROCESS_ATTACH){DisableThreadLibraryCalls(module);InitializeASI();}if(reason==DLL_PROCESS_DETACH&&reserved==nullptr){std::lock_guard lock(ioMutex);quit=true;ioSignal.notify_all();}return TRUE;}
+extern "C" __declspec(dllexport) void InitializeASI(){
+ InitializeWorld();
+#ifdef W2C_PUBLIC_BUILD
+ // Ultimate ASI Loader calls this after loading the root plugin, before its
+ // scripts folder. Open the graphics device outside DllMain, while the x86
+ // process still has room for the driver. Older LB installations skip this.
+ static bool checked=false;
+ if(checked)return;
+ checked=true;
+ char token[33]{},backend[16]{};
+ if(!root[0]||GetEnvironmentVariableA("W2C64_PAGE_TOKEN",token,sizeof(token))!=32)return;
+ GetPrivateProfileStringA("Renderer","Backend","",backend,sizeof(backend),Path("scripts\\NFSMWLimitBreaker.ini").c_str());
+ if(_stricmp(backend,"DX12"))return;
+ const auto path=Path("d3d9.dll");
+ auto handle=GetModuleHandleA(path.c_str());
+ const bool acquired=!handle;
+ if(acquired)handle=LoadLibraryExA(path.c_str(),nullptr,LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_SYSTEM32);
+ if(!handle)return;
+ const auto warm=reinterpret_cast<void(WINAPI*)()>(GetProcAddress(handle,"MWLB_WarmW2CDX12"));
+ if(warm)warm();
+ else if(acquired)FreeLibrary(handle);
+#endif
+}
+BOOL APIENTRY DllMain(HMODULE module,DWORD reason,LPVOID reserved){if(reason==DLL_PROCESS_DETACH)w2v2::ProcessDetach(reserved!=nullptr);if(reason==DLL_PROCESS_ATTACH){DisableThreadLibraryCalls(module);InitializeWorld();}if(reason==DLL_PROCESS_DETACH&&reserved==nullptr){std::lock_guard lock(ioMutex);quit=true;ioSignal.notify_all();}return TRUE;}
 
 
 

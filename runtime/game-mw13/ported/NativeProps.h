@@ -10,7 +10,7 @@ static void RemovePropGhosts(CpuSection& data){std::set<PropTriangle> keys;const
 // transform and COM ownership to the native Smackable factory.
 struct PropParams {unsigned type=0,name=0xA6B47FAC;void* data=nullptr;unsigned pad=0;D3DMATRIX matrix{};bool virgin=true;BYTE padding[3]{};void* model=nullptr;bool simple=false;BYTE padding2[3]{};};
 static_assert(sizeof(PropParams)==92);
-struct NativeProp {w2v2::Epoch queuedEpoch;unsigned id=0;BYTE record[64]{};CpuSection cpu;Section gpu;void* spawner=nullptr;void* sim=nullptr;void* renderVtable[7]{};D3DMATRIX last{};D3DMATRIX initial{};bool readQueued=false,readComplete=false;bool initialized=false;bool refused=false;bool nativeRender=false;bool nativeTouched=false;bool nativeFractured=false;};
+struct NativeProp {w2v2::Epoch queuedEpoch;unsigned id=0;BYTE record[64]{};CpuSection cpu;Section gpu;void* spawner=nullptr;void* sim=nullptr;void* renderVtable[7]{};D3DMATRIX last{};D3DMATRIX initial{};bool readQueued=false,readComplete=false;bool initialized=false;bool refused=false;bool nativeRender=false;bool nativeTouched=false;bool nativeFractured=false;bool rockportCushion=false;bool cushionMotionLogged=false;bool authored=false;};
 static std::vector<std::unique_ptr<NativeProp>> nativeProps;
 static std::set<NativeProp*> activeProps;
 static std::map<void*,NativeProp*> propModelOwners;
@@ -469,17 +469,31 @@ static void TickNativeProps(){propObstacleThread=GetCurrentThreadId();
  // Single-model source props already have an intact converted draw. Release
  // their competing scenery proxy through MW; retain multi-piece proxies that
  // provide native destruction animation transforms.
- bool sourceSingle=PursuitPayloadOwner(&p)&&hierarchy!=propHierarchies.end()&&*reinterpret_cast<unsigned*>(hierarchy->second.data()+4)==1;
+ bool sourceSingle=!p.authored&&PursuitPayloadOwner(&p)&&hierarchy!=propHierarchies.end()&&*reinterpret_cast<unsigned*>(hierarchy->second.data()+4)==1;
  if(!propEffectsDiagnostics&&(!p.nativeRender||sourceSingle)){reinterpret_cast<void(__thiscall*)(void*)>(0x6EEC20)(p.spawner);if(sourceSingle)Log("PROP_RENDER_INITIAL_RELEASED id=%u source_single=1",p.id);}
  propModelOwners[static_cast<BYTE*>(p.spawner)+0x34]=&p;
  PropObstacleOwnerGone(p.id);p.nativeTouched=false;p.nativeFractured=false;
  TracePropProxy(p);p.initialized=PropMatrix(p.spawner,p.initial);
  p.last=p.initial;activeProps.insert(&p);propModelOwners[static_cast<BYTE*>(p.spawner)+0x34]=&p;++added;Log("PROP_NATIVE id=%u spawner=%p asset=%08X matrix=%u",p.id,p.spawner,*reinterpret_cast<unsigned*>(p.record+32),p.initialized);
+ if(worldLogEnabled&&p.rockportCushion){
+  p.cushionMotionLogged=false;
+  Log("ROCKPORT_CUSHION_SPAWNED id=%u at=%.4f,%.4f,%.4f",p.id,p.initial._41,p.initial._42,p.initial._43);
+ }
  if(propPursuitDiagnostics)Log("PROP_SEQUENCE_READY id=%u sequence=%p context=%p solid=%08X source_scenery=%08X hierarchy=%p",p.id,*reinterpret_cast<void**>(static_cast<BYTE*>(p.spawner)+0x6C),static_cast<BYTE*>(p.spawner)+0x40,*reinterpret_cast<unsigned*>(static_cast<BYTE*>(p.spawner)+0xCC),*reinterpret_cast<unsigned*>(p.record+44),*reinterpret_cast<void**>(static_cast<BYTE*>(p.spawner)+0xC8));
 }TickCarbonBreakerPrototype();}
 static D3DMATRIX PropDelta(const D3DMATRIX& initial,const D3DMATRIX& current){
  auto transform=[&](Vec3 r){float phys[3]={-r.y,r.z,r.x},q[3]={0,0,0},out[3]={current._41,current._42,current._43};for(unsigned i=0;i<3;i++)for(unsigned j=0;j<3;j++)q[i]+=(phys[j]-initial.m[3][j])*initial.m[i][j];for(unsigned j=0;j<3;j++)for(unsigned i=0;i<3;i++)out[j]+=q[i]*current.m[i][j];return Vec3{out[2],-out[0],out[1]};};
  Vec3 t=transform({0,0,0});D3DMATRIX result{};for(unsigned i=0;i<3;i++){Vec3 v{};(&v.x)[i]=1;v=Sub(transform(v),t);result.m[i][0]=v.x;result.m[i][1]=v.y;result.m[i][2]=v.z;}result._41=t.x;result._42=t.y;result._43=t.z;result._44=1;return result;
 }
+static void TraceRockportCushion(NativeProp& prop,const D3DMATRIX& current){
+ if(!worldLogEnabled||(!prop.rockportCushion&&!prop.authored)||prop.cushionMotionLogged)return;
+ const float x=current._41-prop.initial._41, y=current._42-prop.initial._42,
+             z=current._43-prop.initial._43;
+ const float travel=prop.authored?x*x+z*z:x*x+y*y+z*z;
+ if(travel<=.64f)return;
+ prop.cushionMotionLogged=true;
+ Log(prop.authored?"AUTHORED_PROP_MOVED id=%u metres=%.3f at=%.4f,%.4f,%.4f":"ROCKPORT_CUSHION_MOVED id=%u metres=%.3f at=%.4f,%.4f,%.4f",
+     prop.id,std::sqrt(travel),current._41,current._42,current._43);
+}
 static void TraceNativePropChildren(){static DWORD last=0;DWORD now=GetTickCount();if((!propEffectsDiagnostics&&!propPursuitDiagnostics)||now-last<100)return;last=now;for(auto it=propChildSims.begin();it!=propChildSims.end();){auto sim=it->first;auto p=it->second;if(*reinterpret_cast<unsigned*>(sim)!=0x8AA638){Log("PROP_CHILD_RELEASED id=%u sim=%p vtable=%p",p->id,sim,*reinterpret_cast<void**>(sim));it=propChildSims.erase(it);continue;}D3DMATRIX m{};SimMatrix(sim,m);Vec3 v{};auto vt=*reinterpret_cast<void***>(sim);reinterpret_cast<void(__thiscall*)(void*,void*)>(vt[26])(sim,&v);Log("PROP_CHILD_MOTION id=%u sim=%p at=%.3f,%.3f,%.3f velocity=%.3f,%.3f,%.3f",p->id,sim,m._41,m._42,m._43,v.x,v.y,v.z);++it;}}
-static void DrawNativeProps(const D3DMATRIX& clip){propObstacleThread=GetCurrentThreadId();const RenderFrustum frustum(clip);if(!envDepthPass&&envAvailable)BindEnvironmentPropColour();TraceNativePropChildren();static DWORD last=0;for(auto ptr:activeProps){auto& p=*ptr;if(!p.spawner||!p.initialized)continue;if(p.sim)SimMatrix(p.sim,p.last);D3DMATRIX current=p.last;if(!PursuitPayloadOwner(&p)&&(!p.nativeRender||!p.nativeTouched)&&p.gpu.vb){auto delta=PropDelta(p.initial,current);Vec3 low{},high{};TransformRenderBounds(p.gpu.header.minimum,p.gpu.header.maximum,delta,low,high);if(!frustum.Visible(low,high))continue;device->SetTransform(D3DTS_WORLD,&delta);if(envDepthPass)SetEnvironmentPropDepth(delta);device->SetStreamSource(0,p.gpu.vb,0,sizeof(Vertex));device->SetIndices(p.gpu.ib);for(auto& m:p.gpu.meshes){if(envDepthPass&&MaterialOf(m.texture).blend)continue;if(m.texture&&!Texture(m.texture))continue;SetMaterial(m.texture);device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,m.firstVertex,0,m.vertexCount,m.firstIndex,m.indexCount/3);}}if(p.sim&&GetTickCount()-last>500){last=GetTickCount();TracePropPhysics(p);Log("PROP_TRANSFORM id=%u position=%.3f,%.3f,%.3f up=%.3f,%.3f,%.3f flags=%u",p.id,current._41,current._42,current._43,current._21,current._22,current._23,unsigned(static_cast<BYTE*>(p.spawner)[0xEC]));}}}
+static void DrawNativeProps(const D3DMATRIX& clip){propObstacleThread=GetCurrentThreadId();const RenderFrustum frustum(clip);if(!envDepthPass&&envAvailable)BindEnvironmentPropColour();TraceNativePropChildren();static DWORD last=0;for(auto ptr:activeProps){auto& p=*ptr;if(!p.spawner||!p.initialized)continue;if(p.sim)SimMatrix(p.sim,p.last);D3DMATRIX current=p.last;if(worldLogEnabled && p.sim && (p.rockportCushion||p.authored))TraceRockportCushion(p,current);if(!PursuitPayloadOwner(&p)&&(!p.nativeRender||!p.nativeTouched)&&p.gpu.vb){auto delta=PropDelta(p.initial,current);Vec3 low{},high{};TransformRenderBounds(p.gpu.header.minimum,p.gpu.header.maximum,delta,low,high);if(!frustum.Visible(low,high))continue;device->SetTransform(D3DTS_WORLD,&delta);if(envDepthPass)SetEnvironmentPropDepth(delta);device->SetStreamSource(0,p.gpu.vb,0,sizeof(Vertex));device->SetIndices(p.gpu.ib);for(auto& m:p.gpu.meshes){if(envDepthPass&&MaterialOf(m.texture).blend)continue;if(m.texture&&!Texture(m.texture))continue;SetMaterial(m.texture);device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,m.firstVertex,0,m.vertexCount,m.firstIndex,m.indexCount/3);}}if(p.sim&&GetTickCount()-last>500){last=GetTickCount();TracePropPhysics(p);Log("PROP_TRANSFORM id=%u position=%.3f,%.3f,%.3f up=%.3f,%.3f,%.3f flags=%u",p.id,current._41,current._42,current._43,current._21,current._22,current._23,unsigned(static_cast<BYTE*>(p.spawner)[0xEC]));}}}

@@ -15,6 +15,10 @@ LANGUAGE_LABELS = {
 }
 LANGUAGES = tuple(LANGUAGE_LABELS.values())
 ENGLISH = {
+    "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Installing LBx64 backs up and replaces the old LB. DLSS and DLAA require a compatible NVIDIA system and SunSet.",
+    "Addonのインストール — W2C 未開通区間の暫定開通": "Install Addon — W2C provisional access to unopened roads",
+    "LBx64 RC3.1をインストール": "Install LBx64 RC3.1",
+    "未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。": "Unselected components are also saved in Optional with installation guides.",
     "W2C to MW のアンインストール": "Uninstall W2C to MW",
     "MW原本のワールドに戻す": "Restore the original MW world",
     "このフォルダーをMW原本の状態に戻しますか？": "Restore the original MW world in this folder?",

@@ -1,4 +1,4 @@
-# Build Converter RC5 on Windows
+# Build Converter RC6 on Windows
 
 The source here covers the converter UI and conversion pipeline, rollback tool,
 the world ASI and repacker, the vault helper, and the adapter for the W2C source
@@ -14,7 +14,7 @@ save files, or prebuilt source importer.
 - For the vault helper's build references, use [OGVI 1.4](https://nfsmods.xyz/mod/5290) extracted over [Attribulator 2.0](https://github.com/NFSTools/Attribulator/releases/tag/v2.0.0). The linked assemblies remain in your tool folder and are not in the converter ZIP.
 
 ```powershell
-git clone --branch v2.0.0-rc5 https://github.com/Zakkey250/W2C-to-MW-Converter.git
+git clone --branch v2.0.0-rc6 https://github.com/Zakkey250/W2C-to-MW-Converter.git
 cd W2C-to-MW-Converter
 git clone https://github.com/berkayylmao/NFSPluginSDK.git third_party/NFSPluginSDK
 git -C third_party/NFSPluginSDK checkout d238bdffc648498840d17133edb256fa0310d355
@@ -24,6 +24,13 @@ msbuild runtime/game-mw13/W2CMWv2.vcxproj /p:Configuration=Release /p:Platform=W
 ```
 
 The portable output is in `build/desktop/portable/W2C-to-MW-Converter`.
+Keep its top-level `optional` directory beside the EXE. It contains the exact
+LBx64 W2CtoMW RC3.1 archive and guide. The road Addon recipe is packaged under
+`_internal/optional/AddOn`; the converter binds it to the selected world quality.
+Before building from a source checkout, copy both files from the RC6 release's
+top-level `optional` folder into `public-converter/optional/LBx64`. The builder
+uses that unchanged component archive; it is not downloaded during conversion.
+Its required SHA-256 is recorded in `public-converter/components.py`.
 The script builds the two Python applications (PyInstaller), publishes the
 vault helper, and prepares the isolated camera interpreter. It intentionally
 does not build or package SourceWorld. The portable EXE creates that dependency
@@ -36,7 +43,7 @@ across toolchains; the ZIP checksum identifies the published build.
 ## SourceWorld (first-time setup or manual build)
 
 On first conversion, the portable EXE offers to build SourceWorld and places
-the resulting helper in its own `_internal/bin` folder. It downloads two fixed
+the resulting helper in the user's local application-data cache. It downloads two fixed
 NFS-ModTools revisions from GitHub and, when the exact .NET SDK is unavailable,
 a portable SDK from Microsoft. The SHA-256 or SHA-512 of each download is
 verified before use. The SDK is temporary, and setup does not need admin rights
@@ -57,6 +64,8 @@ Neither the upstream NFS-ModTools source nor the locally built importer is
 part of the release asset.
 
 ## Build the RC4 to RC5 patcher
+
+This historical patcher only upgrades RC4 to RC5. RC6 uses a full converter rebuild.
 
 Install PyInstaller 6.22.3 and PyYAML 6.0.3 in a Python 3.12 environment and pass the verified
 RC5 runtime from `_internal/bin/W2CMWPublic.asi` in the Converter RC5 ZIP.

@@ -1,9 +1,12 @@
 #pragma once
 #include "WeatherCoverPolicy.h"
+#include "../../format/RoadEnvironment.h"
+static w2road::Environment authoredRoadEnvironment;
 #include "WeatherZonePolicy.h"
 static std::vector<W2CWeatherZone> w2cWeatherZones;
 static std::map<std::pair<int,int>,std::vector<unsigned>> w2cWeatherZoneGrid;
 static float W2CSourceSunExposure(Vec3 renderPosition){
+ if(authoredRoadEnvironment.at({renderPosition.x,renderPosition.y,renderPosition.z}).tunnel)return 0;
  auto cell=w2cWeatherZoneGrid.find({int(std::floor(renderPosition.x/64)),int(std::floor(renderPosition.y/64))});
  if(cell==w2cWeatherZoneGrid.end())return 1;
  Vec3 physics{-renderPosition.y,renderPosition.z,renderPosition.x};
@@ -39,57 +42,167 @@ static bool LoadW2CWeatherZones(){
 }
 static void(__cdecl* w2cWeatherCullOriginal)(void*);
 static bool w2cSourceCovered=false;
+static bool w2cSourceTunnel=false;
 #ifdef W2C_PUBLIC_BUILD
 static bool w2cPlayerInTunnel=false;
 #endif
 static void(__cdecl* w2cRainDrawOriginal)(bool);
 static void InstallW2CRainDraw();
+
+static W2CWeatherCover W2CCoverAt(Vec3 position){
+ W2CWeatherCover cover;
+ const auto authored=authoredRoadEnvironment.at({position.z,-position.x,position.y});
+ if(authored.tunnel)return {true,true,authored.roof};
+ const float x=position.z,y=-position.x;
+ if(!std::isfinite(x)||!std::isfinite(y)||!std::isfinite(position.y)||
+    std::abs(x)>=100000||std::abs(y)>=100000||std::abs(position.y)>=100000)return cover;
+ const auto cell=w2cWeatherZoneGrid.find({int(std::floor(x/64)),int(std::floor(y/64))});
+ if(cell!=w2cWeatherZoneGrid.end()){
+  for(auto index:cell->second){
+   const auto& zone=w2cWeatherZones[index];
+   if(position.y>zone.elevation||!W2CPointInWeatherZone(zone,x,y))continue;
+   cover.roofHeight=cover.roof?std::max(cover.roofHeight,zone.elevation):zone.elevation;
+   cover.roof=true;
+   cover.tunnel|=zone.type==3;
+  }
+ }
+ // This BVH includes the active collision AddOn, including new tunnel roofs.
+ return cover.roof?cover:W2CWorldWeatherCover(collision,position);
+}
+
 static void W2CUpdateWeatherCover(){
  __try{
   w2cSourceCovered=false;
+  w2cSourceTunnel=false;
 #ifdef W2C_PUBLIC_BUILD
   w2cPlayerInTunnel=false;
 #endif
-  if(!W2MW_IsWorldActiveV1()||*reinterpret_cast<int*>(0x925E90)!=6)return;
-  auto rain=*reinterpret_cast<BYTE**>(0x9196B8);
-  auto camera=*reinterpret_cast<D3DMATRIX**>(0x919650);
-  if(!rain||!camera)return;
-  const auto& view=*camera;
-  Vec3 renderEye{-(view._41*view._11+view._42*view._12+view._43*view._13),
-   -(view._41*view._21+view._42*view._22+view._43*view._23),-(view._41*view._31+view._42*view._32+view._43*view._33)};
-  Vec3 position{-renderEye.y,renderEye.z,renderEye.x};bool physicalPlayer=W2CReadPlayerPosition(position);
-  // Chase cameras and the debug race camera may be outside a tunnel while
-  // the actual player is inside it. Prefer the physical player position.
-  auto cover=W2CSourceWeatherCover(w2cWeatherZones,position);
-  bool sourceCovered=cover.roof;
-  if(!cover.roof)cover=W2CWorldWeatherCover(collision,position);
+  if(!W2MW_IsWorldActiveV1())return;
+  Vec3 position{};
+  const bool physicalPlayer=W2CReadPlayerPosition(position);
+  if(!physicalPlayer){
+   const auto camera=*reinterpret_cast<D3DMATRIX**>(0x919650);
+   if(!camera)return;
+   const auto& view=*camera;
+   position={view._41*view._21+view._42*view._22+view._43*view._23,
+    -(view._41*view._31+view._42*view._32+view._43*view._33),
+    -(view._41*view._11+view._42*view._12+view._43*view._13)};
+  }
+  static Vec3 lastPosition{FLT_MAX,FLT_MAX,FLT_MAX};
+  static W2CWeatherCover cover;
+  if(position.x!=lastPosition.x||position.y!=lastPosition.y||position.z!=lastPosition.z){
+   cover=W2CCoverAt(position);
+   lastPosition=position;
+  }
   w2cSourceCovered=cover.roof;
+  w2cSourceTunnel=cover.tunnel;
 #ifdef W2C_PUBLIC_BUILD
   w2cPlayerInTunnel=physicalPlayer&&cover.tunnel;
 #endif
-  // Rain layout from SunSet Rain.h: 0x8F integers precede these native flags.
-  *reinterpret_cast<int*>(rain+0x23C)=cover.tunnel?1:0;
-  *reinterpret_cast<int*>(rain+0x240)=cover.roof&&!cover.tunnel?1:0;
-  static DWORD next=0;DWORD now=worldLogEnabled?GetTickCount():0;if(worldLogEnabled&&now>=next){next=now+2000;
-   Log("W2C_WEATHER_COVER roof=%u tunnel=%u roof_height=%.3f position=%.3f,%.3f,%.3f physical_player=%u source_zone=%u native_flags_updated_before_SunSet=1",
-    unsigned(cover.roof),unsigned(cover.tunnel),cover.roofHeight,position.x,position.y,position.z,unsigned(physicalPlayer),unsigned(sourceCovered));}
+  if(worldLogEnabled){
+   static DWORD lastReport=0;static unsigned lastFlags=~0u;
+   const auto now=GetTickCount();const unsigned flags=unsigned(cover.roof)|(unsigned(cover.tunnel)<<1);
+   if(flags!=lastFlags||now-lastReport>=2000){
+    lastReport=now;lastFlags=flags;
+    Log("W2C_WEATHER_COVER roof=%u tunnel=%u roof_height=%.3f position=%.3f,%.3f,%.3f physical_player=%u",
+     unsigned(cover.roof),unsigned(cover.tunnel),cover.roofHeight,position.x,position.y,position.z,unsigned(physicalPlayer));
+   }
+  }
  }__except(EXCEPTION_EXECUTE_HANDLER){static bool reported=false;if(!reported){reported=true;Log("W2C_WEATHER_COVER_FAULT code=%08X",GetExceptionCode());}}
 }
-static void __cdecl W2CWeatherCull(void* cull){w2cWeatherCullOriginal(cull);W2CUpdateWeatherCover();if(W2MW_IsWorldActiveV1())InstallW2CRainDraw();}
+static void(__thiscall* w2cRainPrepareOriginal)(BYTE*,float);
+static int(__cdecl* w2cRainViewOriginal)(void*,int);
+static BYTE* w2cWorldRain=nullptr;
+static void* w2cRainParticleMaskOriginal=nullptr;
+static const uintptr_t w2cRainParticleMaskSet=0x757D63;
+static const uintptr_t w2cRainParticleMaskClear=0x757D69;
+
+static void __fastcall W2CRainPrepare(BYTE* rain,void*,float delta){
+ // The native shelter flags imply a valid native polygon at Rain+0x244.
+ // Keep W2C cover independent and pass it only to the particle-mask branch.
+ if(rain==*reinterpret_cast<BYTE**>(0x9196B8)){
+  W2CUpdateWeatherCover();
+  w2cWorldRain=W2MW_IsWorldActiveV1()?rain:nullptr;
+  if(worldLogEnabled){
+   static unsigned last=~0u;
+   const bool nativeRoof=*reinterpret_cast<int*>(rain+0x23C)!=0||
+                         *reinterpret_cast<int*>(rain+0x240)!=0;
+   const unsigned flags=unsigned(w2cSourceCovered)|(unsigned(nativeRoof)<<1);
+   if(flags!=last){last=flags;
+    Log("W2C_RAIN_PARTICLE_COVER roof=%u native_roof=%u tunnel=%u native_zone=%p",
+        unsigned(w2cSourceCovered),unsigned(nativeRoof),unsigned(w2cSourceTunnel),
+        *reinterpret_cast<void**>(rain+0x244));}
+  }
+ }
+ w2cRainPrepareOriginal(rain,delta);
+}
+
+static void __declspec(naked) W2CRainParticleMask(){
+ __asm {
+  cmp esi, dword ptr [w2cWorldRain]
+  jne original
+  cmp byte ptr [w2cSourceCovered], 0
+  je outside
+  jmp dword ptr [w2cRainParticleMaskSet]
+ outside:
+  jmp dword ptr [w2cRainParticleMaskClear]
+ original:
+  jmp dword ptr [w2cRainParticleMaskOriginal]
+ }
+}
+
+static int __cdecl W2CRainView(void* view,int includeOverpass){
+ if(view==reinterpret_cast<void*>(0x919650)&&W2MW_IsWorldActiveV1()){
+  W2CUpdateWeatherCover();
+  return includeOverpass?int(w2cSourceCovered):int(w2cSourceTunnel);
+ }
+ return w2cRainViewOriginal(view,includeOverpass);
+}
+
+static void InstallW2CRainCoverHooks(){
+ auto install=[](uintptr_t address,const BYTE* guard,size_t size,void* detour,void** original){
+  auto site=reinterpret_cast<void*>(address);
+  if(memcmp(site,guard,size)||MH_CreateHook(site,detour,original)!=MH_OK)return false;
+  if(MH_EnableHook(site)==MH_OK)return true;
+  MH_RemoveHook(site);
+  return false;
+ };
+ const BYTE prepareGuard[]={0x55,0x8B,0xEC,0x83,0xE4,0xF0,0x51,0x53,0x56,0x8B,0xF1,0x8B,0x8E,0x88,0x02,0x00,0x00};
+ const BYTE maskGuard[]={0x39,0xBE,0x40,0x02,0x00,0x00,0x75,0x08,0x39,0xBE,0x3C,0x02,0x00,0x00,0x74,0x06,0x89,0x9E,0x34,0x02,0x00,0x00};
+ const BYTE viewGuard[]={0x8B,0x44,0x24,0x04,0x8B,0x40,0x68,0x85,0xC0,0x74,0x1C,0x8B,0x4C,0x24,0x08};
+ const bool prepare=install(0x753B50,prepareGuard,sizeof(prepareGuard),
+  W2CRainPrepare,reinterpret_cast<void**>(&w2cRainPrepareOriginal));
+ const bool mask=prepare&&install(0x757D53,maskGuard,sizeof(maskGuard),
+  W2CRainParticleMask,&w2cRainParticleMaskOriginal);
+ const bool view=install(0x73CFE0,viewGuard,sizeof(viewGuard),
+  W2CRainView,reinterpret_cast<void**>(&w2cRainViewOriginal));
+ Log("W2C_RAIN_COVER_HOOKS particle_prepare=%u view_query=%u particle_mask=%u",unsigned(prepare),unsigned(view),unsigned(mask));
+}
+
+static void __cdecl W2CWeatherCull(void* cull){w2cWeatherCullOriginal(cull);W2CUpdateWeatherCover();}
 static void __cdecl W2CRainDraw(bool reflection){
- // Native Rain::Update can overwrite the shelter flags after scenery culling.
- // Re-evaluate at the native particle compositor without changing wetness.
+ // Refresh cover at the particle compositor without changing road wetness.
  W2CUpdateWeatherCover();
- if(w2cSourceCovered){static DWORD next=0;DWORD now=GetTickCount();if(now>=next){next=now+2000;Log("W2C_RAIN_DRAW_SUPPRESSED source_or_collision_cover=1 reflection=%u",unsigned(reflection));}return;}
+ if(worldLogEnabled){
+  static unsigned lastDecision=~0u;
+  const auto decision=unsigned(w2cSourceCovered);
+  if(decision!=lastDecision){lastDecision=decision;
+   const auto rain=*reinterpret_cast<const BYTE**>(0x9196B8);
+   Log("W2C_RAIN_DRAW cover=%u reflection=%u native_particle_mask=%d",
+       decision,unsigned(reflection),rain?*reinterpret_cast<const int*>(rain+0x234):-1);}
+ }
+ if(w2cSourceCovered)return;
  w2cRainDrawOriginal(reflection);
 }
 static void InstallW2CRainDraw(){
  // XboxRainDroplets discovers this original instruction signature during
  // ASI initialization. Install only once all ASIs have initialized.
  static bool tried=false;if(tried)return;tried=true;
+ InstallW2CRainCoverHooks();
  const BYTE rainGuard[]={0xA1,0xB8,0x96,0x91,0x00,0x8B,0x08,0x81,0xEC,0x8C,0x00,0x00,0x00};auto rainSite=reinterpret_cast<void*>(0x6D4620);
  if(memcmp(rainSite,rainGuard,sizeof(rainGuard))){Log("W2C_RAIN_DRAW_REFUSED ABI_guard");return;}
- if(MH_CreateHook(rainSite,W2CRainDraw,reinterpret_cast<void**>(&w2cRainDrawOriginal))!=MH_OK||MH_EnableHook(rainSite)!=MH_OK){Log("W2C_RAIN_DRAW_REFUSED hook");return;}
+ if(MH_CreateHook(rainSite,W2CRainDraw,reinterpret_cast<void**>(&w2cRainDrawOriginal))!=MH_OK){Log("W2C_RAIN_DRAW_REFUSED hook");return;}
+ if(MH_EnableHook(rainSite)!=MH_OK){MH_RemoveHook(rainSite);Log("W2C_RAIN_DRAW_REFUSED enable");return;}
  Log("W2C_RAIN_DRAW_ACTIVE cdecl_bool=1 native_wetness_preserved=1 W2C_only=1");
 }
 static void InstallW2CWeatherCover(){
@@ -98,5 +211,5 @@ static void InstallW2CWeatherCover(){
  if(memcmp(site,guard,sizeof(guard))){Log("W2C_WEATHER_COVER_REFUSED ABI_guard");return;}
  if(MH_CreateHook(site,W2CWeatherCull,reinterpret_cast<void**>(&w2cWeatherCullOriginal))!=MH_OK)return;
  if(MH_EnableHook(site)!=MH_OK){MH_RemoveHook(site);return;}
- Log("W2C_WEATHER_COVER_ACTIVE native_rain_flags=023C,0240 SunSet_weather_preserved=1 W2C_only=1");
+ Log("W2C_WEATHER_COVER_ACTIVE native_rain_flags_preserved=1 SunSet_weather_preserved=1 W2C_only=1");
 }
