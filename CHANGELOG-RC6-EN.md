@@ -15,7 +15,7 @@ This update follows RC5. The required source release remains **W2C 2.0.0**. Rebu
 
 ## Changes since RC5
 
-- Improved daytime headlights in shade, daytime tunnel lighting, and suppression of precipitation inside tunnels.
+- Improved daytime tunnel lighting and suppression of precipitation inside tunnels.
 - Fixed invisible winter terrain collision remaining on the Rockport golf course and the collision that could lift a car near the bus terminal.
 - Improved world loading and rendering.
 - Ordinary terrain, lighting, precipitation and road fixes apply with the Addon disabled. Only provisional access to unopened roads depends on the Addon option.
