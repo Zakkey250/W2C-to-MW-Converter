@@ -8,11 +8,14 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from components import (
-    LB_ARCHIVE, LB_SHA256, VCACHE_ARCHIVE, VCACHE_FILES, VCACHE_SHA256, bundled_vcache_files, digest, encode,
+    CONVERTER_VERSION, LB_PACKAGE_PATH, VCACHE_ARCHIVE, VCACHE_FILES, VCACHE_SHA256, bundled_vcache_files,
+    current_lbx64_files, digest, encode,
 )
 
 LB_MODULES = ("NFSMWLimitBreaker", "MWLimitBrakerX64")
 VCACHE_MODULES = ("NFSMWVCacheAffinity",)
+D3D_PROVIDER_CONFIGS = {"renderers/dx11/dgVoodoo.conf", "renderers/dx12/dgVoodoo.conf"}
+LB_SETTINGS = "scripts/NFSMWLimitBreaker.ini"
 
 
 def legacy_module_paths(modules, game=None):
@@ -57,10 +60,12 @@ def space_budget(package, game, *, lbx64, vcache=False):
     """Include optional copies, original protection and interrupted-commit data."""
     from install import component_paths, under
     manifest = json.loads((package / "package.json").read_bytes())
-    copied = sum(row["bytes"] for row in manifest.get("optionalFiles", []))
+    optional = {row["path"]: under(package, row["path"]) for row in manifest.get("optionalFiles", [])}
+    optional.update(current_lbx64_files(optional, required=lbx64))
+    copied = sum(path.stat().st_size for path in optional.values())
     expanded = 0
     if lbx64:
-        with ZipFile(package / "Optional/LBx64" / LB_ARCHIVE) as archive:
+        with ZipFile(optional[LB_PACKAGE_PATH]) as archive:
             expanded = sum(row.file_size for row in archive.infolist())
     if vcache:
         local_copy = package / "Optional/VCache" / VCACHE_ARCHIVE
@@ -133,12 +138,13 @@ def plan_components(package, game, *, addon, lbx64, vcache=False):
 
     manifest = json.loads((package / "package.json").read_bytes())
     rows = manifest.get("optionalFiles", [])
-    if not rows and (addon or lbx64):
-        raise ValueError("Rebuild the world with RC6 to select its bundled components.")
+    if not rows and addon:
+        raise ValueError(f"Rebuild the world with {CONVERTER_VERSION} to select its road add-on.")
     previous = component_state(game)
-    if not rows and not vcache and isinstance(previous, dict) and not previous.get("vcache"):
+    if not rows and not (lbx64 or vcache) and not previous.get("files"):
         return {}, {"addon": False, "lbx64": False, "vcache": False}
     optional = {row["path"]: under(package, row["path"]) for row in rows}
+    optional.update(current_lbx64_files(optional, required=lbx64))
     vcache_archive = f"Optional/VCache/{VCACHE_ARCHIVE}"
     if vcache_archive not in optional:
         # Earlier RC6 conversions use the same world data. Attach this
@@ -154,16 +160,18 @@ def plan_components(package, game, *, addon, lbx64, vcache=False):
 
     def include(name, data):
         current = under(game, name)
-        if (name in previous["files"] and sha(current) != previous["files"][name]
-                and not name.lower().endswith(".ini")):
+        current_hash = sha(current)
+        if (name in previous["files"] and current_hash != previous["files"][name]
+                and not name.lower().endswith(".ini")
+                and not (name in D3D_PROVIDER_CONFIGS and data == current)):
             raise ValueError(f"The optional component was edited after installation: {name}")
         backup = under(game, f"{CONTROL}/component-originals/{name}")
         if name not in before:
             # A failed install may already have retained the original. Never
             # replace a recoverable original with a newer installed component.
-            if backup.exists() and sha(backup) != sha(current):
+            if backup.exists() and sha(backup) != current_hash:
                 raise ValueError(f"Retained original component differs: {name}")
-            before[name] = sha(current)
+            before[name] = current_hash
             if current.is_file() and not backup.exists():
                 replace_file(backup, current)
         elif before[name] is not None and sha(backup) != before[name]:
@@ -176,18 +184,20 @@ def plan_components(package, game, *, addon, lbx64, vcache=False):
         for file in sorted(base.rglob("*")):
             if file.is_file():
                 include(file.relative_to(base).as_posix(), file)
+    redux = False
     if lbx64 or vcache:
         from preflight import CATALOG, file_digest
-        if file_digest(game / "speed.exe").upper() not in {
+        target = file_digest(game / "speed.exe").upper()
+        redux = target == CATALOG["targets"]["Redux 3.04"]["sha256"]
+        english = target in {
                 CATALOG["targets"]["NFSPatcher EN-US 1.3 LAA"]["sha256"],
-                "80774C2E5D619B4F120B48D4462896FD504C263399D203A238769CFFDE1D253C"}:
-            if vcache:
-                raise ValueError("NFSMWVCacheAffinityには対応する英語版1.3の実行ファイルが必要です。")
-            raise ValueError("LBx64 RC3.1 requires the supported English 1.3 executable. Its manual package is included.")
+                "80774C2E5D619B4F120B48D4462896FD504C263399D203A238769CFFDE1D253C"}
+        if vcache and not english:
+            raise ValueError("NFSMWVCacheAffinityには対応する英語版1.3の実行ファイルが必要です。")
+        if lbx64 and not (english or redux):
+            raise ValueError("LBx64 requires a supported NFSPatcher EN-US 1.3 or Redux 3.04 executable.")
     if lbx64:
-        archive_path = package / "Optional/LBx64" / LB_ARCHIVE
-        if digest(archive_path.read_bytes()) != LB_SHA256:
-            raise ValueError("Invalid LBx64 RC3.1 archive.")
+        archive_path = optional[LB_PACKAGE_PATH]
         # Keep the original outside every ASI search directory. Removing a
         # legacy duplicate is part of the same recoverable commit as the new LB.
         candidates = set(legacy_module_paths(LB_MODULES, game)) | {
@@ -203,8 +213,15 @@ def plan_components(package, game, *, addon, lbx64, vcache=False):
                 if name not in component_paths():
                     raise ValueError(f"Unexpected LBx64 component: {name}")
                 data = archive.read(name)
+                if redux and name == LB_SETTINGS:
+                    text = data.decode("utf-16")
+                    text = re.sub(r"(?m)^(Backend\s*=\s*)DX12\b", r"\g<1>DX11", text, count=1)
+                    text = re.sub(r"(?m)(^\[DLSS\][^\[]*?^Enabled\s*=\s*)1\b", r"\g<1>0", text, count=1)
+                    data = text.encode("utf-16")
                 current = under(game, name)
-                if name.endswith(".ini") and current.is_file():
+                if name in D3D_PROVIDER_CONFIGS and current.is_file():
+                    data = current
+                elif name.endswith(".ini") and current.is_file():
                     data = merge_ini(current.read_bytes(), data)
                 include(name, data)
     if vcache:
@@ -242,6 +259,6 @@ def plan_components(package, game, *, addon, lbx64, vcache=False):
         if name != "TRACKS/L2RA.BUN":
             changes[name] = source if original is not None else None
     options = {"addon": addon, "lbx64": lbx64, "vcache": vcache}
-    state = {"converterVersion": "RC6", **options, "files": managed, "originals": before}
+    state = {"converterVersion": CONVERTER_VERSION, **options, "files": managed, "originals": before}
     changes[COMPONENT_STATE] = encode(state)
     return changes, options

@@ -22,7 +22,7 @@ from preflight import (
     sunset_config, sunset_row, texwizard_settings,
 )
 from package_layout import CORE, RULES, STREAM, stream_digest, target_core
-from components import LB_ARCHIVE, VCACHE_ARCHIVE, VCACHE_FILES, VCACHE_GUIDE
+from components import CONVERTER_VERSION, LB_ARCHIVE, VCACHE_ARCHIVE, VCACHE_FILES, VCACHE_GUIDE
 
 
 CONTROL = "W2CMWPublic"
@@ -657,7 +657,7 @@ def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64
                 raise ValueError(f"Original MW backup fingerprint differs: {name}")
         new_generation_bytes = sum(row["bytes"] for row in package_info["files"])
         stage_budget = 64 * 1024**2 + 3 * sum(under(mw, name).stat().st_size for name in protected_core)
-        if package_info.get("optionalFiles") or vcache:
+        if package_info.get("optionalFiles") or lbx64 or vcache:
             from install_components import space_budget
             stage_budget += space_budget(package, mw, lbx64=lbx64, vcache=vcache)
         generation_index = under(mw, f"{CONTROL}/generations/{package_info['buildId']}/World/L5RA.w2i")
@@ -715,7 +715,7 @@ def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64
                 verify_vault()
 
         commit_changes(mw, changes, before_commit=verify_runtime)
-        return {**installation, "components": components, "converterVersion": "RC6"}
+        return {**installation, "components": components, "converterVersion": CONVERTER_VERSION}
 
 
 def main():

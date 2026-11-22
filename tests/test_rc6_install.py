@@ -108,6 +108,25 @@ class InstallationProtection(unittest.TestCase):
         self.assertFalse((self.game / VCACHE_FILES[0]).exists())
         self.assertTrue((self.game / "W2CMWPublic" / path).is_file())
 
+    def test_redux_lbx64_upgrade_preserves_renderer_setting(self):
+        from preflight import CATALOG
+        filename = "scripts/NFSMWLimitBreaker.ini"
+        self.put(self.package, "package.json", encode({"optionalFiles": []}))
+        self.put(self.game, "speed.exe", b"test fixture")
+        fingerprint = CATALOG["targets"]["Redux 3.04"]["sha256"]
+        with patch("preflight.file_digest", return_value=fingerprint):
+            changes, options = plan_components(self.package, self.game, addon=False, lbx64=True)
+            self.assertTrue(options["lbx64"])
+            self.assertIn("Backend = DX11", changes[filename].decode("utf-16"))
+            self.assertIn("Enabled = 0", changes[filename].decode("utf-16").split("[DLSS]", 1)[1])
+            self.assertIn("renderers/dx9/d3d9.dll", changes)
+            self.assertIn("renderers/dx11/d3d9.dll", changes)
+            self.put(self.game, filename, b"[Renderer]\r\nBackend=DX9\r\nFlipEx=0\r\n")
+            changes, _ = plan_components(self.package, self.game, addon=False, lbx64=True)
+            self.assertIn("Backend = DX9", changes[filename].decode("utf-16"))
+            with self.assertRaisesRegex(ValueError, "NFSMWVCacheAffinity"):
+                plan_components(self.package, self.game, addon=False, lbx64=True, vcache=True)
+
     def test_rc5_world_upgrade_keeps_first_install_originals(self):
         old_generation, new_generation = "a" * 64, "b" * 64
         base = {}

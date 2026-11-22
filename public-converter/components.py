@@ -11,13 +11,17 @@ import zlib
 
 
 ROOT = Path(__file__).resolve().parent
+CONVERTER_VERSION = "RC6.1"
 SOURCES = ROOT / "optional"
 PORTABLE_OPTIONAL = Path(sys.executable).parent / "optional" if getattr(sys, "frozen", False) else None
 LB_SOURCE = PORTABLE_OPTIONAL or SOURCES / "LBx64"
 VCACHE_SOURCE = PORTABLE_OPTIONAL or SOURCES / "VCache"
 ADDON_NAME = "W2C 未開通区間の暫定開通"
 LB_ARCHIVE = "LBx64 W2CtoMW RC3.1.zip"
-LB_SHA256 = "66f71a5c527a4b6e1a21605fd733daa526948f18938ef21e65ba2e166ddde32c"
+LB_SHA256 = "ffa7174d1e9abde4866c1d102db0285ce3ec7edf69a0e9eea621eecac463fe4a"
+LB_PREVIOUS_SHA256 = "66f71a5c527a4b6e1a21605fd733daa526948f18938ef21e65ba2e166ddde32c"
+LB_GUIDE = "README-LBx64.txt"
+LB_PACKAGE_PATH = f"Optional/LBx64/{LB_ARCHIVE}"
 VCACHE_ARCHIVE = "NFSMWVCacheAffinity 0.7.1.zip"
 VCACHE_GUIDE = "README-VCacheAffinity.txt"
 VCACHE_SHA256 = "ac8a9c220bdfdacf835cdb1d8665ed12e7c7b3c15be524f0986aa9be8077665f"
@@ -30,6 +34,24 @@ ROAD_MATERIAL_ALIASES = {0x8C58916B: 0x22FFF2E5}
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def current_lbx64_files(optional, *, required=False):
+    """Use the complete bundled LBx64 with older verified world packs."""
+    archive = optional.get(LB_PACKAGE_PATH)
+    if archive is None and not required:
+        return {}
+    if archive is not None:
+        fingerprint = digest(archive.read_bytes())
+        if fingerprint == LB_SHA256:
+            return {LB_PACKAGE_PATH: archive}
+        if fingerprint != LB_PREVIOUS_SHA256:
+            raise ValueError("Invalid LBx64 RC3.1 archive.")
+    current = LB_SOURCE / LB_ARCHIVE
+    guide = LB_SOURCE / LB_GUIDE
+    if digest(current.read_bytes()) != LB_SHA256 or not guide.is_file():
+        raise ValueError("The bundled LBx64 update does not match this converter.")
+    return {LB_PACKAGE_PATH: current, f"Optional/LBx64/{LB_GUIDE}": guide}
 
 
 def bundled_vcache_files():
@@ -196,7 +218,7 @@ def prepare(package):
         encoding="utf-8")
     lb = destination / "LBx64"
     lb.mkdir(exist_ok=True)
-    for name in (LB_ARCHIVE, "README-LBx64.txt"):
+    for name in (LB_ARCHIVE, LB_GUIDE):
         shutil.copyfile(LB_SOURCE / name, lb / name)
     if digest((lb / LB_ARCHIVE).read_bytes()) != LB_SHA256:
         raise ValueError("The bundled LBx64 RC3.1 archive has changed.")

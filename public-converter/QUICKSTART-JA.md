@@ -1,6 +1,6 @@
 # W2C to MW Converter 2.0.0 — 初回利用ガイド
 
-**コンバーターRC6（Windows x64）。** ZIPをすべて展開し、`_internal` フォルダーを隣に置いたまま `W2C-to-MW-Converter.exe` を起動してください。初めて変換するときは原本読み込み部品のセットアップを確認してください。必要な部品をネットから取得・照合し、PC内でビルドします。PythonやVisual Studioは不要です。
+**コンバーターRC6.1（Windows x64）。** ZIPをすべて展開し、`_internal` フォルダーを隣に置いたまま `W2C-to-MW-Converter.exe` を起動してください。初めて変換するときは原本読み込み部品のセットアップを確認してください。必要な部品をネットから取得・照合し、PC内でビルドします。PythonやVisual Studioは不要です。
 
 RC5以前の環境へRC6の変更をすべて反映するには、W2Cの原本から再構築してください。最初のW2C導入時に退避した原本は保持されます。
 
@@ -44,7 +44,7 @@ CarbonにW2Cの小物属性が入っていない場合は、W2C 2.0.0原本の�
 
 LBx64を選んだ場合は、旧LBと読み込み先に重複するLBを退避して差し替えます。退避先はASIの探索対象外です。復元時は、旧LBと既存設定も戻します。RC5以前へ導入した際の原本バックアップは更新で上書きしません。復元後は、最初のW2C導入前のワールドに戻ります。
 
-LBx64 RC3.1は対応するEN-US 1.3実行ファイル用です。Redux実行ファイルではLBx64の自動導入を選ばないでください。DLSS・DLAAを使う場合は、対応するNVIDIA GPU・ドライバー・SunSetが必要です。GPU名だけでは動作を保証できません。別の描画ラッパーがある場合は既存設定を確認してください。
+LBx64は対応するNFSPatcher EN-US 1.3とRedux 3.04に自動配置できます。ReduxではNextGenGraphicsと同梱シェーダーを保持します。描画方式の指定がまだない場合はDX11で始まります。標準DX9、DX9Ex（FlipEx）、DX11、DX12の切り替えは同梱のLBx64ガイドを参照してください。DLSS・DLAAには対応するNVIDIA GPU・ドライバー・SunSetが必要です。
 
 NFSMWVCacheAffinityはL3容量が異なるCCDを持つAMD Ryzen X3Dと対応する英語版1.3向けです。対応CPUではゲームを3D V-Cache側に割り当てます。設定は `scripts/NFSMWVCacheAffinity.ini` にあります。Reduxではこの項目をオフにしてください。
 

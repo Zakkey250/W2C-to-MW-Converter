@@ -1,12 +1,12 @@
 # W2C to MW Converter 2.0.0
 
-**Converter RC6 (Windows x64).** Extract the ZIP and open `W2C-to-MW-Converter.exe`. Keep the `_internal` folder beside the EXE. At the first conversion, approve the on-screen importer setup. This uses the internet to fetch and verify the pinned dependencies, then builds the importer locally. Python and Visual Studio are not required.
+**Converter RC6.1 (Windows x64).** Extract the ZIP and open `W2C-to-MW-Converter.exe`. Keep the `_internal` folder beside the EXE. At the first conversion, approve the on-screen importer setup. This uses the internet to fetch and verify the pinned dependencies, then builds the importer locally. Python and Visual Studio are not required.
 
 Rebuild RC5 or earlier worlds from your original W2C files to get all RC6 changes. The converter retains the world backups from the first W2C installation.
 
 The review screen offers **Install Addon — W2C provisional access to unopened roads** **Install LBx64 RC3.1**, and **Install NFSMWVCacheAffinity**. The Addon is prepared for your selected quality and Carbon resources. Ordinary terrain, tunnel lighting and precipitation fixes also apply without the Addon. Unselected components are saved with guides in `Optional`, and after placement in `W2CMWPublic/Optional`.
 
-Installing LBx64 backs up and replaces the old LB and duplicate LB modules. The rollback utility restores the old files and settings. LBx64 RC3.1 requires a compatible EN-US 1.3 executable; do not select its automatic installation for Redux. DLSS and DLAA also require a compatible NVIDIA GPU, driver and SunSet. Other rendering wrappers may need separate configuration.
+Installing LBx64 backs up and replaces the old LB and duplicate LB modules. The rollback utility restores the old files and settings. Automatic installation supports verified NFSPatcher EN-US 1.3 and Redux 3.04 executables. Keep Redux's NextGenGraphics and shader files. Redux uses DX11 by default when no renderer is already configured. See the bundled LBx64 guide for native DX9, DX9Ex (FlipEx), DX11 and DX12 settings. DLSS and DLAA require a compatible NVIDIA GPU, driver and SunSet.
 
 NFSMWVCacheAffinity assigns the game to the 3D V-Cache CCD on supported AMD Ryzen X3D systems with unequal L3 cache sizes across CCDs. It requires a compatible English 1.3 executable. Leave it off for Redux. Settings are in `scripts/NFSMWVCacheAffinity.ini`.
 

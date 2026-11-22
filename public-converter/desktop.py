@@ -10,6 +10,7 @@ from tkinter import filedialog, font, messagebox, ttk
 import webbrowser
 
 from build_world import CORE, STREAM, mw_inputs, mw_target_base
+from components import CONVERTER_VERSION
 from convert import convert
 from converter_locale import LANGUAGES, detail as localized_detail, locale_label, set_locale_label, tr
 from install import (
@@ -49,7 +50,7 @@ class ConverterWindow:
     def __init__(self, root):
         self.root = root
         self.language = tk.StringVar(master=root, value=locale_label())
-        self.root.title("W2C to MW 2.0.0 — Converter RC6")
+        self.root.title(f"W2C to MW 2.0.0 — Converter {CONVERTER_VERSION}")
         self.root.geometry("1060x725")
         self.root.minsize(960, 665)
         self.root.configure(bg=SURFACE)

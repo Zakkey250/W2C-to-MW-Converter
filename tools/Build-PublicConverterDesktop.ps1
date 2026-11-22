@@ -42,7 +42,8 @@ if($LASTEXITCODE){throw 'Unable to build the standalone rollback executable'}
 $identity=Join-Path $build 'compiler-identity.json'
 $rows=@{}
 foreach($path in @($repacker,$vault,$rules,(Join-Path $desktop 'catalog.json'),(Join-Path $desktop 'build_world.py'),
-    (Join-Path $desktop 'install.py'),(Join-Path $desktop 'preflight.py'),(Join-Path $desktop 'desktop.py'),
+    (Join-Path $desktop 'install.py'),(Join-Path $desktop 'components.py'),(Join-Path $desktop 'install_components.py'),
+    (Join-Path $desktop 'components-catalog.json'),(Join-Path $desktop 'preflight.py'),(Join-Path $desktop 'desktop.py'),
     (Join-Path $desktop 'convert.py'),(Join-Path $desktop 'package_layout.py'),
     (Join-Path $desktop 'pursuit.py'),(Join-Path $desktop 'carbon_sequences.py'),(Join-Path $desktop 'palmont_districts.py'),
     (Join-Path $desktop 'public_night_materials.py'),(Join-Path $desktop 'public_world_effects.py'),

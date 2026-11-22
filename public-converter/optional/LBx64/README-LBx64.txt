@@ -4,6 +4,15 @@ LBx64 W2CtoMW RC3.1
 
 W2CtoMW用の任意コンポーネントです。DLSS Super Resolutionは低い内部解像度から画面解像度へ再構成し、DLAAは画面と同じ解像度でアンチエイリアスを行います。
 
+描画方式はゲームを終了してから scripts/NFSMWLimitBreaker.ini で変更します。
+・DX9 標準: [Renderer] Backend=DX9、FlipEx=0
+・DX9Ex（FlipEx）: [Renderer] Backend=DX9、FlipEx=1
+・DX11: [Renderer] Backend=DX11
+・DX12: [Renderer] Backend=DX12。対応環境でDLSS/DLAAを使うには [DLSS] Enabled=1 にします。
+DX9Ex、DX11、DX12用のプロバイダーは renderers 以下に収録しています。DX11とDX12の仮想VRAM既定値は14,336 MiBです。
+
+Redux 3.04はRC6.1の自動配置に対応しています。ReduxのNextGenGraphics、シェーダー、既存のASIローダーを保持します。新規に手動で追加する場合は、まずDX11と [DLSS] Enabled=0 で起動してください。
+
 導入済みの変換パックに追加する場合は、ゲームを終了し、RC6の「変換済みパックを配置」で「LBx64 RC3.1をインストール」を選んでください。既存ファイルの退避と復元をコンバーターが管理します。以下は手動で導入する場合の手順です。
 
 1. W2CtoMWを導入し、ゲームを終了します。DLSS・DLAAには対応するGeForce RTX、NVIDIAドライバ、ASIローダー、SunSet 1.15.0.0が必要です。対応する英語1.3版speed.exeとSunSet.asiのSHA-256は末尾に記載しています。
@@ -16,6 +25,15 @@ W2CtoMW用の任意コンポーネントです。DLSS Super Resolutionは低い�
 English
 
 This optional W2CtoMW component supports DLSS Super Resolution and DLAA. Super Resolution reconstructs a lower-resolution scene at display resolution. DLAA applies anti-aliasing at native resolution.
+
+Close the game before changing scripts/NFSMWLimitBreaker.ini.
+- Native DX9: [Renderer] Backend=DX9, FlipEx=0.
+- DX9Ex (FlipEx): [Renderer] Backend=DX9, FlipEx=1.
+- DX11: [Renderer] Backend=DX11.
+- DX12: [Renderer] Backend=DX12. Set [DLSS] Enabled=1 for DLSS/DLAA on supported systems.
+The DX9Ex, DX11 and DX12 providers are included under renderers. DX11 and DX12 default to 14,336 MiB of virtual VRAM.
+
+Converter RC6.1 supports automatic installation on Redux 3.04. Keep Redux's NextGenGraphics, shaders and existing ASI loader. For a first manual installation, start with DX11 and [DLSS] Enabled=0.
 
 To add LBx64 to an existing converted pack, close the game, open Install an existing pack in Converter RC6, and select Install LBx64 RC3.1. The converter manages backups and rollback. Follow the steps below for manual installation.
 

@@ -9,6 +9,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 
+from components import CONVERTER_VERSION
 from preflight import CATALOG, carbon_banks, check_target, checked_folder, file_at, source_rows
 
 
@@ -105,7 +106,7 @@ def convert(w2c, mw, quality, output, work=None, *, carbon=None, vault_tool=None
         from components import prepare
         manifest_path = package / "package.json"
         manifest = json.loads(manifest_path.read_bytes())
-        manifest["converterVersion"] = "RC6"
+        manifest["converterVersion"] = CONVERTER_VERSION
         manifest["optionalFiles"] = prepare(package)
         manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         progress("検証済みパックを保存", 95)
