@@ -15,6 +15,10 @@ LANGUAGE_LABELS = {
 }
 LANGUAGES = tuple(LANGUAGE_LABELS.values())
 ENGLISH = {
+    "NFSMWVCacheAffinityをインストール": "Install NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "NFSMWVCacheAffinity requires a compatible English 1.3 executable and an AMD Ryzen X3D with unequal L3 cache sizes across CCDs.",
+    "NFSMWVCacheAffinityには対応する英語版1.3の実行ファイルが必要です。": "NFSMWVCacheAffinity requires a compatible English 1.3 executable.",
+    "NFSMWVCacheAffinityの同梱ファイルを確認できません。ZIPを展開し直してください。": "The bundled NFSMWVCacheAffinity files could not be verified. Extract a fresh copy of the converter ZIP.",
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Installing LBx64 backs up and replaces the old LB. DLSS and DLAA require a compatible NVIDIA system and SunSet.",
     "Addonのインストール — W2C 未開通区間の暫定開通": "Install Addon — W2C provisional access to unopened roads",
     "LBx64 RC3.1をインストール": "Install LBx64 RC3.1",

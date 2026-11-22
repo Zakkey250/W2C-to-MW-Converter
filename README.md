@@ -15,6 +15,7 @@ Drive through Rockport and Palmont in **Need for Speed: Most Wanted (2005)**. Th
 - Choose the original W2C **NORMAL**, **WORLD**, or **X360** quality. The world map and radar use W2C map data. A separate Need for Speed World installation is unnecessary.
 - Rebuild Rockport tollbooths, Palmont safehouses and shops, roadside objects, and supported world animations and effects. At shared Palmont facilities, press **Home** to switch between the safehouse and shop, then use the game's normal confirmation control to enter.
 - Use optional Carbon assets to restore supported Carbon pursuit breakers, debris, proximity-triggered pursuit cameras, and environmental effects. With the compatible Carbon tools, Palmont place names can distinguish 22 districts. Without Carbon, compatible Most Wanted assets are used where available.
+- Choose whether to open additional routes with the provisional-road Addon or install LBx64 RC3.1 or NFSMWVCacheAffinity for compatible AMD Ryzen X3D CPUs. LBx64 expands vehicle and resource limits and enables DLSS and DLAA with a compatible executable, NVIDIA GPU, driver, and SunSet.
 - Check source files and the game folder before converting. Save a verified pack for later or install it directly. Installation does not edit standard saves or write to `GLOBAL/attributes.bin`, `fe_attrib.bin`, `gameplay.bin`, or `gameplay.lzc`. The converter and the standalone rollback tool have 17 interface languages.
 
 ## Requirements
@@ -43,7 +44,7 @@ To update RC5 or earlier to RC6, rebuild from the original W2C 2.0.0 files with 
 
 1. Close the game and its launcher. Back up your saves and use a separate Most Wanted game folder without another world loader.
 2. In **Releases → Assets**, download the Windows x64 converter ZIP. Extract it fully, keep `_internal` beside `W2C-to-MW-Converter.exe`, and open the EXE.
-3. Select the W2C source, the Most Wanted folder and a quality. Add the optional inputs you want to use and complete the game folder checks. On the review screen, choose whether to install the provisional-road Addon and LBx64 RC3.1. Unselected components remain in `Optional` with their guides.
+3. Select the W2C source, the Most Wanted folder and a quality. Add the optional inputs you want to use and complete the game folder checks. On the review screen, choose whether to install the provisional-road Addon, LBx64 RC3.1, and NFSMWVCacheAffinity. Unselected components remain in `Optional` with their guides.
 4. Choose a new output folder and convert. Select automatic installation or use **Install an existing pack** later. Copying an output pack into the game folder by itself does not activate it. After installation, launch that folder's `speed.exe`.
    - At the first conversion, accept the one-time importer setup. The converter verifies and downloads the pinned upstream source and a temporary .NET SDK if needed, then builds the importer locally. Internet access is needed for setup; Python and Visual Studio are not required. [Build instructions](BUILD.md)
 5. To restore the previous world, close the game and confirm in `W2CMWPublic/W2CMW-Rollback.exe` inside the game folder. Rollback keeps your saves, converted packs, SunSet and TexWizard.
@@ -57,7 +58,7 @@ To update RC5 or earlier to RC6, rebuild from the original W2C 2.0.0 files with 
 - Some stock Most Wanted events may have checkpoints that cannot be crossed normally. World or event transitions can occasionally take a long time.
 - Without Carbon and OGVI, some Carbon-specific breakers, pursuit markers, cameras and environmental effects are omitted. Some objects use Most Wanted substitutes, keep only their appearance, or remain absent when no compatible asset is available. Check the conversion report for substitutions and omissions. Moving props do not cast their own shadows.
 - A brief cluster of stutters was observed in one X360 long-distance run. It did not recur on the same section of the repeat run; its cause is unknown. Brief flicker on illuminated windows has also been reported; the release checks did not establish that it was resolved.
-- A crash was previously observed in a custom eight-car Hot Pursuit with a weapon mod. That combination was not revalidated for this release. The eight-car sprint checks used no police or weapons; all eight cars physically crossed the finish, but the native results screen was not observed within the test window.
+- A custom eight-car Hot Pursuit with a weapon mod has been reported to crash. The results screen may also be delayed in custom eight-car sprints.
 - An incomplete SunSet installation can cause a crash on entering free roam. If you use SunSet, finish the SunSet/TexWizard checks before installing. Mods that replace the same world files may conflict. If you change the game's attribute data after converting, rebuild the pack for that installation.
 
 When reporting a problem, include the selected quality, whether you used Carbon/OGVI and SunSet, the mods installed, and the location or steps to reproduce it. Please do not attach converted packs, extracted game assets or saves.

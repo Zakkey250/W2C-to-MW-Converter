@@ -59,6 +59,7 @@ class ConverterWindow:
         self.auto_install = tk.BooleanVar()
         self.install_addon = tk.BooleanVar()
         self.install_lbx64 = tk.BooleanVar()
+        self.install_vcache = tk.BooleanVar()
         self.cancellation = Event()
         self.events = Queue()
         self.busy = False
@@ -436,6 +437,10 @@ class ConverterWindow:
                         text=tr('Addonのインストール — W2C 未開通区間の暫定開通')).pack(anchor="w", pady=(12, 4))
         ttk.Checkbutton(self.content, variable=self.install_lbx64,
                         text=tr('LBx64 RC3.1をインストール')).pack(anchor="w", pady=(0, 4))
+        ttk.Checkbutton(self.content, variable=self.install_vcache,
+                        text=tr('NFSMWVCacheAffinityをインストール')).pack(anchor="w", pady=(0, 4))
+        self.label(self.content, tr('NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。'),
+                   fg=MUTED, size=9, wraplength=650).pack(anchor="w", pady=(0, 4))
         self.label(self.content, tr('未選択のコンポーネントも、導入ガイド付きでOptionalフォルダーに保存します。'),
                    fg=MUTED, size=9, wraplength=650).pack(anchor="w")
         self.label(self.content, tr('LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。'),
@@ -521,9 +526,9 @@ class ConverterWindow:
         bar.pack(fill="x")
         bar.start(14)
         language = self.language.get()
-        addon, lbx64 = self.install_addon.get(), self.install_lbx64.get()
+        addon, lbx64, vcache = (self.install_addon.get(), self.install_lbx64.get(), self.install_vcache.get())
         self.run(lambda: install(self.output, self.target, language=language, mw_reference=self.mw_reference,
-                                 addon=addon, lbx64=lbx64),
+                                 addon=addon, lbx64=lbx64, vcache=vcache),
                  lambda _: self.complete(installed=True),
                  lambda: self.complete(placement_failed=True))
 

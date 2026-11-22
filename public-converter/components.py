@@ -12,10 +12,17 @@ import zlib
 
 ROOT = Path(__file__).resolve().parent
 SOURCES = ROOT / "optional"
-LB_SOURCE = Path(sys.executable).parent / "optional" if getattr(sys, "frozen", False) else SOURCES / "LBx64"
+PORTABLE_OPTIONAL = Path(sys.executable).parent / "optional" if getattr(sys, "frozen", False) else None
+LB_SOURCE = PORTABLE_OPTIONAL or SOURCES / "LBx64"
+VCACHE_SOURCE = PORTABLE_OPTIONAL or SOURCES / "VCache"
 ADDON_NAME = "W2C 未開通区間の暫定開通"
 LB_ARCHIVE = "LBx64 W2CtoMW RC3.1.zip"
 LB_SHA256 = "66f71a5c527a4b6e1a21605fd733daa526948f18938ef21e65ba2e166ddde32c"
+VCACHE_ARCHIVE = "NFSMWVCacheAffinity 0.7.1.zip"
+VCACHE_GUIDE = "README-VCacheAffinity.txt"
+VCACHE_SHA256 = "ac8a9c220bdfdacf835cdb1d8665ed12e7c7b3c15be524f0986aa9be8077665f"
+VCACHE_FILES = ("scripts/NFSMWVCacheAffinity.asi", "scripts/NFSMWVCacheAffinity.ini",
+                "LICENSES/NFSMWVCacheAffinity-MinHook.txt")
 # Carbon's flat grey utility image is absent from Carbonless W2C sources.
 # Use W2C's own grey cement on those authored road surfaces instead.
 ROAD_MATERIAL_ALIASES = {0x8C58916B: 0x22FFF2E5}
@@ -23,6 +30,14 @@ ROAD_MATERIAL_ALIASES = {0x8C58916B: 0x22FFF2E5}
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def bundled_vcache_files():
+    archive = VCACHE_SOURCE / VCACHE_ARCHIVE
+    guide = VCACHE_SOURCE / VCACHE_GUIDE
+    if not archive.is_file() or digest(archive.read_bytes()) != VCACHE_SHA256 or not guide.is_file():
+        raise ValueError("NFSMWVCacheAffinityの同梱ファイルを確認できません。ZIPを展開し直してください。")
+    return {f"Optional/VCache/{file.name}": file for file in (archive, guide)}
 
 
 def encode(value):
@@ -56,7 +71,7 @@ def rebind_roads(reader, core):
     identities = json.loads((source / "source-identities.json").read_bytes())
     raw = {name: (source / name).read_bytes() for name in identities["files"]}
     if any(digest(data) != identities["files"][name] for name, data in raw.items()):
-        raise ValueError("The bundled roads differ from the verified Sandbox version.")
+        raise ValueError("The bundled Addon files failed the integrity check. Extract a fresh copy of the converter ZIP and try again.")
     patch = json.loads(raw["collision.json"])
     collision = reader.read(60, "collision")
     signatures = identities["faces"]
@@ -185,6 +200,10 @@ def prepare(package):
         shutil.copyfile(LB_SOURCE / name, lb / name)
     if digest((lb / LB_ARCHIVE).read_bytes()) != LB_SHA256:
         raise ValueError("The bundled LBx64 RC3.1 archive has changed.")
+    for name, source in bundled_vcache_files().items():
+        file = package / name
+        file.parent.mkdir(exist_ok=True)
+        shutil.copyfile(source, file)
     return [{"path": file.relative_to(package).as_posix(), "bytes": file.stat().st_size,
              "sha256": digest(file.read_bytes())}
             for file in sorted(destination.rglob("*")) if file.is_file()]

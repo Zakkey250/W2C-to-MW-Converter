@@ -52,7 +52,7 @@ static void TickAmbientParticles(){if(!ambientActive)return;DWORD now=GetTickCou
 #ifdef W2C_PUBLIC_BUILD
  if(sourceCarbonPursuit&&!EnsureSourcePublicPursuitVault())return;
 #endif
- // Opt-in sandbox test: destroy one owned effect through the same native
+ // Opt-in diagnostics destroy one owned effect through the same native
  // destructor/pool path used by the chunk unloader, then recycle all owned
  // chunks. It changes neither gameflow nor native world/save state.
  static DWORD testStart=0;static unsigned testStage=0;if(ambientDiagnostics){if(!testStart)testStart=now;

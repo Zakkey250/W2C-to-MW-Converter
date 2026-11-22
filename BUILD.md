@@ -30,7 +30,7 @@ LBx64 W2CtoMW RC3.1 archive and guide. The road Addon recipe is packaged under
 Before building from a source checkout, copy both files from the RC6 release's
 top-level `optional` folder into `public-converter/optional/LBx64`. The builder
 uses that unchanged component archive; it is not downloaded during conversion.
-Its required SHA-256 is recorded in `public-converter/components.py`.
+Its required SHA-256 is recorded in `public-converter/components.py`. Copy the NFSMWVCacheAffinity archive and `README-VCacheAffinity.txt` from the same release folder into `public-converter/optional/VCache`. The converter verifies the CPU component archive against its pinned SHA-256.
 The script builds the two Python applications (PyInstaller), publishes the
 vault helper, and prepares the isolated camera interpreter. It intentionally
 does not build or package SourceWorld. The portable EXE creates that dependency

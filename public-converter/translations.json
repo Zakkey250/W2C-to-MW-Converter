@@ -1,5 +1,7 @@
 {
   "da": {
+    "NFSMWVCacheAffinityをインストール": "Installer NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Kræver en kompatibel engelsk 1.3-spilfil og en AMD Ryzen X3D med forskellig L3-cachekapacitet på de to CCD'er.",
     "W2C to MW のアンインストール": "Uninstallation W2C to MW",
     "MW原本のワールドに戻す": "Genopretning af den oprindelige MW verden",
     "このフォルダーをMW原本の状態に戻しますか？": "Gendanne den oprindelige MW verden i denne mappe?",
@@ -242,6 +244,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Ved installation af LBx64 sikkerhedskopieres og erstattes den gamle LB. DLSS og DLAA kræver et kompatibelt NVIDIA-system og SunSet."
   },
   "nl": {
+    "NFSMWVCacheAffinityをインストール": "NFSMWVCacheAffinity installeren",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Vereist een compatibel Engels 1.3-uitvoerbaar bestand en een AMD Ryzen X3D met verschillende L3-cachegroottes per CCD.",
     "W2C to MW のアンインストール": "ontgrendelen W2C to MW",
     "MW原本のワールドに戻す": "Herstel de oorspronkelijke MW-wereld",
     "このフォルダーをMW原本の状態に戻しますか？": "Herstel de oorspronkelijke MW-wereld in deze map?",
@@ -484,6 +488,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Bij installatie van LBx64 wordt de oude LB geback-upt en vervangen. DLSS en DLAA vereisen een compatibel NVIDIA-systeem en SunSet."
   },
   "fi": {
+    "NFSMWVCacheAffinityをインストール": "Asenna NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Edellyttää yhteensopivaa englanninkielistä 1.3-pelitiedostoa ja AMD Ryzen X3D -suoritinta, jonka CCD-piirien L3-välimuistit ovat erikokoiset.",
     "W2C to MW のアンインストール": "Poistaa W2C to MW",
     "MW原本のワールドに戻す": "Palauta alkuperäinen MW-maailma",
     "このフォルダーをMW原本の状態に戻しますか？": "Palauta alkuperäinen MW-maailma tässä tiedostossa?",
@@ -726,6 +732,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "LBx64:n asennus varmuuskopioi ja korvaa vanhan LB:n. DLSS ja DLAA edellyttävät yhteensopivaa NVIDIA-järjestelmää ja SunSetiä."
   },
   "fr": {
+    "NFSMWVCacheAffinityをインストール": "Installer NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Nécessite un exécutable anglais 1.3 compatible et un AMD Ryzen X3D avec des tailles de cache L3 différentes selon les CCD.",
     "W2C to MW のアンインストール": "Désinstaller W2C to MW",
     "MW原本のワールドに戻す": "Récupérer le monde MW original",
     "このフォルダーをMW原本の状態に戻しますか？": "Restaurer le monde MW original dans ce dossier ?",
@@ -968,6 +976,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "L’installation de LBx64 sauvegarde et remplace l’ancien LB. DLSS et DLAA nécessitent un système NVIDIA compatible et SunSet."
   },
   "de": {
+    "NFSMWVCacheAffinityをインストール": "NFSMWVCacheAffinity installieren",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Erfordert eine kompatible englische 1.3-EXE und einen AMD Ryzen X3D mit unterschiedlich großen L3-Caches auf den CCDs.",
     "W2C to MW のアンインストール": "Entfernen W2C to MW",
     "MW原本のワールドに戻す": "Wiederherstellen der ursprünglichen MW-Welt",
     "このフォルダーをMW原本の状態に戻しますか？": "Wiederherstellen der ursprünglichen MW-Welt in diesem Ordner?",
@@ -1210,6 +1220,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Bei der Installation von LBx64 wird der alte LB gesichert und ersetzt. DLSS und DLAA erfordern ein kompatibles NVIDIA-System und SunSet."
   },
   "it": {
+    "NFSMWVCacheAffinityをインストール": "Installa NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Richiede un eseguibile inglese 1.3 compatibile e un AMD Ryzen X3D con cache L3 di dimensioni diverse sui CCD.",
     "W2C to MW のアンインストール": "Disinstallazione W2C to MW",
     "MW原本のワールドに戻す": "Ristrutturare il mondo MW originale",
     "このフォルダーをMW原本の状態に戻しますか？": "Ripristinare il mondo MW originale in questa cartella?",
@@ -1452,6 +1464,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "L’installazione di LBx64 crea un backup e sostituisce il vecchio LB. DLSS e DLAA richiedono un sistema NVIDIA compatibile e SunSet."
   },
   "ko": {
+    "NFSMWVCacheAffinityをインストール": "NFSMWVCacheAffinity 설치",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "호환되는 영어판 1.3 실행 파일과 CCD별 L3 캐시 크기가 다른 AMD Ryzen X3D가 필요합니다.",
     "W2C to MW のアンインストール": "제거 W2C to MW",
     "MW原本のワールドに戻す": "원래 MW 세계를 복원",
     "このフォルダーをMW原本の状態に戻しますか？": "이 폴더에서 원래 MW 세계를 복원합니까?",
@@ -1694,6 +1708,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "LBx64 설치 시 기존 LB를 백업한 후 교체합니다. DLSS 및 DLAA에는 호환되는 NVIDIA 환경과 SunSet이 필요합니다."
   },
   "pl": {
+    "NFSMWVCacheAffinityをインストール": "Zainstaluj NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Wymaga zgodnego angielskiego pliku wykonywalnego w wersji 1.3 oraz procesora AMD Ryzen X3D z różnymi rozmiarami pamięci podręcznej L3 na modułach CCD.",
     "W2C to MW のアンインストール": "Odinstaluj W2C to MW",
     "MW原本のワールドに戻す": "Przywrócenie oryginalnego świata MW",
     "このフォルダーをMW原本の状態に戻しますか？": "Przywróć oryginalny świat MW w tym folderze?",
@@ -1936,6 +1952,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Instalacja LBx64 tworzy kopię zapasową starego LB i zastępuje go. DLSS i DLAA wymagają zgodnego systemu NVIDIA oraz SunSet."
   },
   "ru": {
+    "NFSMWVCacheAffinityをインストール": "Установить NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Требуются совместимый английский исполняемый файл версии 1.3 и AMD Ryzen X3D с разным объёмом кэша L3 у CCD.",
     "W2C to MW のアンインストール": "Отключение W2C to MW",
     "MW原本のワールドに戻す": "Восстановить оригинальный MW World",
     "このフォルダーをMW原本の状態に戻しますか？": "Восстановить оригинальный MW World в этом папке?",
@@ -2178,6 +2196,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "При установке LBx64 старый LB сохраняется в резервной копии и заменяется. Для DLSS и DLAA нужны совместимая система NVIDIA и SunSet."
   },
   "es": {
+    "NFSMWVCacheAffinityをインストール": "Instalar NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Requiere un ejecutable compatible de la versión inglesa 1.3 y un AMD Ryzen X3D con tamaños de caché L3 distintos en los CCD.",
     "W2C to MW のアンインストール": "Desinstalar W2C to MW",
     "MW原本のワールドに戻す": "Restaurar el mundo original MW",
     "このフォルダーをMW原本の状態に戻しますか？": "¿Recuperar el mundo original MW en esta cartera?",
@@ -2420,6 +2440,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Al instalar LBx64 se guarda una copia y se sustituye el LB anterior. DLSS y DLAA requieren un sistema NVIDIA compatible y SunSet."
   },
   "sv": {
+    "NFSMWVCacheAffinityをインストール": "Installera NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Kräver en kompatibel engelsk 1.3-spelfil och en AMD Ryzen X3D med olika stora L3-cacheminnen på CCD:erna.",
     "W2C to MW のアンインストール": "Avinstallera W2C to MW",
     "MW原本のワールドに戻す": "Återställ den ursprungliga MW-världen",
     "このフォルダーをMW原本の状態に戻しますか？": "Återställa den ursprungliga MW-världen i den här mappen?",
@@ -2662,6 +2684,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "När LBx64 installeras säkerhetskopieras och ersätts den gamla LB. DLSS och DLAA kräver ett kompatibelt NVIDIA-system och SunSet."
   },
   "th": {
+    "NFSMWVCacheAffinityをインストール": "ติดตั้ง NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "ต้องใช้ไฟล์เกมภาษาอังกฤษเวอร์ชัน 1.3 ที่รองรับ และ AMD Ryzen X3D ที่มีแคช L3 ขนาดต่างกันในแต่ละ CCD",
     "W2C to MW のアンインストール": "ปิดติดตั้ง W2C to MW",
     "MW原本のワールドに戻す": "การกู้คืนโลก MW ที่เดิม",
     "このフォルダーをMW原本の状態に戻しますか？": "การกู้คืนโลก MW ของเดิมในโฟลเดอร์นี้?",
@@ -2904,6 +2928,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "เมื่อติดตั้ง LBx64 จะสำรองข้อมูลและแทนที่ LB รุ่นเก่า DLSS และ DLAA ต้องใช้ระบบ NVIDIA ที่รองรับและ SunSet"
   },
   "zh-Hans": {
+    "NFSMWVCacheAffinityをインストール": "安装 NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "需要兼容的英文版 1.3 可执行文件，以及各 CCD 的 L3 缓存容量不同的 AMD Ryzen X3D。",
     "W2C to MW のアンインストール": "解除 W2C to MW",
     "MW原本のワールドに戻す": "恢复原始MW世界",
     "このフォルダーをMW原本の状態に戻しますか？": "在此文件夹中恢复原来的MW世界?",
@@ -3146,6 +3172,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "安装 LBx64 时会备份并替换旧版 LB。DLSS 和 DLAA 需要兼容的 NVIDIA 环境和 SunSet。"
   },
   "es-MX": {
+    "NFSMWVCacheAffinityをインストール": "Instalar NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "Requiere un ejecutable compatible de la versión en inglés 1.3 y un AMD Ryzen X3D con tamaños de caché L3 distintos en los CCD.",
     "W2C to MW のアンインストール": "Desinstalar W2C to MW",
     "MW原本のワールドに戻す": "Restaurar el mundo original MW",
     "このフォルダーをMW原本の状態に戻しますか？": "¿Recuperar el mundo original MW en esta cartera?",
@@ -3388,6 +3416,8 @@
     "LBx64の導入時は旧LBを退避して差し替えます。DLSS・DLAAには対応するNVIDIA環境とSunSetが必要です。": "Al instalar LBx64 se guarda una copia y se reemplaza el LB anterior. DLSS y DLAA requieren un sistema NVIDIA compatible y SunSet."
   },
   "zh-Hant": {
+    "NFSMWVCacheAffinityをインストール": "安裝 NFSMWVCacheAffinity",
+    "NFSMWVCacheAffinityには対応する英語版1.3と、L3容量が異なるCCDを持つAMD Ryzen X3Dが必要です。": "需要相容的英文版 1.3 執行檔，以及各 CCD 的 L3 快取容量不同的 AMD Ryzen X3D。",
     "W2C to MW のアンインストール": "解除 W2C to MW",
     "MW原本のワールドに戻す": "恢復原始MW世界",
     "このフォルダーをMW原本の状態に戻しますか？": "在此資料夾中恢復原來的MW世界?",

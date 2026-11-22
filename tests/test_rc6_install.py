@@ -10,7 +10,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / name) for name in ("public-converter", "compiler/source-runtime", "tools")]
 import install
-from components import LB_ARCHIVE, encode
+from components import LB_ARCHIVE, VCACHE_ARCHIVE, VCACHE_FILES, encode
 from install_components import plan_components
 
 
@@ -59,13 +59,14 @@ class InstallationProtection(unittest.TestCase):
             install.commit_changes(self.game, changes)
             first_backup = {p.relative_to(self.game).as_posix(): install.sha(p)
                             for p in (self.game / "W2CMWPublic/component-originals").rglob("*") if p.is_file()}
-            self.assertIn(b"MaxVehicles = 48", (self.game / "scripts/NFSMWLimitBreaker.ini").read_bytes())
+            self.assertIn("MaxVehicles = 48", (self.game / "scripts/NFSMWLimitBreaker.ini").read_text(encoding="utf-16"))
             self.assertFalse((self.game / "plugins/disabled/NFSMWLimitBreaker.asi").exists())
             config = self.game / "scripts/NFSMWLimitBreaker.ini"
-            config.write_bytes(config.read_bytes().replace(b"MaxVehicles = 48", b"MaxVehicles = 40"))
+            config.write_text(config.read_text(encoding="utf-16").replace("MaxVehicles = 48", "MaxVehicles = 40"), encoding="utf-16")
             again, _ = plan_components(self.package, self.game, addon=False, lbx64=True)
             install.commit_changes(self.game, again)
-            self.assertIn(b"MaxVehicles = 40", config.read_bytes())
+            self.assertIn("MaxVehicles = 40", config.read_text(encoding="utf-16"))
+            self.assertIn("車両枠数", config.read_text(encoding="utf-16"))
             self.assertFalse((self.game / "plugins/disabled/NFSMWLimitBreaker.asi").exists())
             self.assertFalse((self.game / "update/MWLimitBrakerX64.asi").exists())
             for name, digest in first_backup.items():
@@ -74,6 +75,38 @@ class InstallationProtection(unittest.TestCase):
             install.commit_changes(self.game, off)
             for name, data in original.items():
                 self.assertEqual((self.game / name).read_bytes(), data)
+
+    def test_vcache_is_independent_and_restores_existing_installation(self):
+        from preflight import CATALOG
+        supported = CATALOG["targets"]["NFSPatcher EN-US 1.3 LAA"]["sha256"]
+        self.put(self.package, "package.json", encode({"optionalFiles": []}))
+        duplicate = "plugins/existing/NFSMWVCacheAffinity.asi"
+        original = {duplicate: b"prior asi", duplicate.replace(".asi", ".ini"): b"[Main]\r\nMode=PreferVCache\r\n"}
+        for name, data in original.items():
+            self.put(self.game, name, data)
+        with patch("preflight.file_digest", return_value="unsupported"):
+            with self.assertRaisesRegex(ValueError, "英語版1.3"):
+                plan_components(self.package, self.game, addon=False, lbx64=False, vcache=True)
+        with patch("preflight.file_digest", return_value=supported):
+            changes, state = plan_components(self.package, self.game, addon=False, lbx64=False, vcache=True)
+        self.assertTrue(state["vcache"])
+        self.assertFalse(state["lbx64"])
+        self.assertIsNone(changes[duplicate])
+        self.assertIn("W2CMWPublic/Optional/VCache/" + VCACHE_ARCHIVE, changes)
+        install.commit_changes(self.game, changes)
+        self.assertTrue((self.game / VCACHE_FILES[0]).is_file())
+        cfg = (self.game / VCACHE_FILES[1]).read_text(encoding="utf-16")
+        self.assertIn("Mode = PreferVCache", cfg)
+        self.assertIn("割り当てモード", cfg)
+        self.assertIn("Logging = 0", cfg)
+        path = "Optional/VCache/" + VCACHE_ARCHIVE
+        restore, state = plan_components(self.package, self.game, addon=False, lbx64=False)
+        install.commit_changes(self.game, restore)
+        for name, data in original.items():
+            self.assertEqual((self.game / name).read_bytes(), data)
+        self.assertFalse(state["vcache"])
+        self.assertFalse((self.game / VCACHE_FILES[0]).exists())
+        self.assertTrue((self.game / "W2CMWPublic" / path).is_file())
 
     def test_rc5_world_upgrade_keeps_first_install_originals(self):
         old_generation, new_generation = "a" * 64, "b" * 64

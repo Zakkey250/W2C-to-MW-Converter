@@ -246,20 +246,53 @@ static bool BeginEnvironment(const D3DMATRIX& clip,Vec3 eye,bool mainView){if(wo
  if(envAvailable)w2c_public_light::BalanceDaylight(envDiffuse,envAmbient,1.80f,PublicShadeWeight());
 #endif
  ReadEnvironmentVehicleLights(eye);envNight=envAvailable&&(envTOD>envLightsOn||envTOD<envLightsOff)?1.f:0.f;envAnimationDraws=envLitDraws=0;}if(!envAvailable||!InitEnvironmentShaders())return false;device->SetVertexDeclaration(envDecl);if(envDepthPass&&!InitEnvironmentDepthShaders())return false;device->SetVertexShader(envDepthPass?envDepthVS:envVS);device->SetPixelShader(envDepthPass?envDepthPS:envPS);device->SetVertexShaderConstantF(0,&clip._11,4);D3DMATRIX identity{};identity._11=identity._22=identity._33=identity._44=1;device->SetVertexShaderConstantF(5,&identity._11,4);device->SetPixelShaderConstantF(0,envDiffuse,1);device->SetPixelShaderConstantF(1,envAmbient,1);device->SetPixelShaderConstantF(2,envSun,1);device->SetPixelShaderConstantF(3,envFog,1);device->SetPixelShaderConstantF(4,envFogSun,1);device->SetPixelShaderConstantF(5,envFogValue,1);float p[4]{eye.x,eye.y,eye.z,1};device->SetPixelShaderConstantF(6,p,1);if(!envDepthPass){BindEnvironmentRoad();BindEnvironmentShadow();}envDynamicMask=~0u;envSurfaceSet=false;envLocalSet=false;envSurfaceSubmit.reset();device->SetPixelShaderConstantF(33,envDP[0],16);device->SetPixelShaderConstantF(49,envDD[0],16);device->SetPixelShaderConstantF(65,envDC[0],16);float dynamic[4]{float(envVehicleLights),envShadeHeadlightBoost,0,0};device->SetPixelShaderConstantF(81,dynamic,1);device->SetSamplerState(1,D3DSAMP_MINFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MAGFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MIPFILTER,D3DTEXF_LINEAR);device->SetSamplerState(1,D3DSAMP_MIPMAPLODBIAS,0);device->SetSamplerState(1,D3DSAMP_MAXMIPLEVEL,0);return true;}
-static unsigned EnvironmentTexture(unsigned hash){auto it=envFrames.find(hash);if(it==envFrames.end())return hash;auto& a=envAnimations[it->second.first];unsigned index=(unsigned((a.base?envRealTime:envWorldTime)*a.fps)+it->second.second)%a.frames.size();auto next=a.frames[index];if(Texture(next)){++envAnimationDraws;return next;}return hash;}
-static void SetEnvironmentSurface(unsigned hash){if(envSurfaceSet&&envSurfaceHash==hash)return;envSurfaceHash=hash;envSurfaceSet=true;auto it=envMaterials.find(hash);EnvironmentMaterial m;if(it!=envMaterials.end())m=it->second;float uv[4]{0,0,1,1};if(m.scroll==3){uv[0]=m.offsetS/-1024.f;uv[1]=m.offsetT/-1024.f;uv[2]=1+m.scaleS/256.f;uv[3]=1+m.scaleT/256.f;}else if(m.scroll){float time=envWorldTime;if(m.scroll==2&&m.step>0)time=float(int(time/(m.step/256.f)));uv[0]=std::fmod(time*m.speedS/4096.f,1.f);uv[1]=std::fmod(time*m.speedT/4096.f,1.f);}
+// These tables are populated before terrain submission. The pass caches
+// metadata only; animation frames and mask textures still check residency.
+static const std::pair<unsigned,unsigned>* EnvironmentFrameOf(unsigned hash){
+ auto* cached=TerrainLookup::surface(hash);
+ if(cached&&cached->animationKnown)return cached->animation;
+ const auto it=envFrames.find(hash);
+ const auto* frame=it==envFrames.end()?nullptr:&it->second;
+ if(cached){cached->animation=frame;cached->animationKnown=true;}
+ return frame;
+}
+static const EnvironmentMaterial& EnvironmentMaterialOf(unsigned hash){
+ static const EnvironmentMaterial fallback{};
+ auto* cached=TerrainLookup::surface(hash);
+ if(cached&&cached->materialKnown)return *cached->material;
+ const auto it=envMaterials.find(hash);
+ const auto& material=it==envMaterials.end()?fallback:it->second;
+ if(cached){cached->material=&material;cached->materialKnown=true;}
+ return material;
+}
+static bool EnvironmentNightOverlayOf(unsigned hash){
+ auto* cached=TerrainLookup::surface(hash);
+ if(cached&&cached->nightKnown)return cached->night;
+ const bool night=envNightOverlays.count(hash)!=0;
+ if(cached){cached->night=night;cached->nightKnown=true;}
+ return night;
+}
+static unsigned EnvironmentTexture(unsigned hash){const auto* frame=EnvironmentFrameOf(hash);if(!frame)return hash;auto& a=envAnimations[frame->first];unsigned index=(unsigned((a.base?envRealTime:envWorldTime)*a.fps)+frame->second)%a.frames.size();auto next=a.frames[index];if(Texture(next)){++envAnimationDraws;return next;}return hash;}
+static void SetEnvironmentSurface(unsigned hash,TerrainDeviceState* bindings){if(envSurfaceSet&&envSurfaceHash==hash)return;envSurfaceHash=hash;envSurfaceSet=true;const auto& m=EnvironmentMaterialOf(hash);float uv[4]{0,0,1,1};if(m.scroll==3){uv[0]=m.offsetS/-1024.f;uv[1]=m.offsetT/-1024.f;uv[2]=1+m.scaleS/256.f;uv[3]=1+m.scaleT/256.f;}else if(m.scroll){float time=envWorldTime;if(m.scroll==2&&m.step>0)time=float(int(time/(m.step/256.f)));uv[0]=std::fmod(time*m.speedS/4096.f,1.f);uv[1]=std::fmod(time*m.speedT/4096.f,1.f);}
  envSurfaceSubmit.uv.bind(uv,[](const float* values,unsigned count){return SUCCEEDED(device->SetVertexShaderConstantF(4,values,count));});
  if(envDepthPass)return;
  const auto material=MaterialOf(hash);
  const float brightness=m.brightness*(m.always?1:envNight);
  float emission[8]{m.rgb[0],m.rgb[1],m.rgb[2],brightness,
   brightness>0?1.f:0.f,float(m.prelit),float(m.vertexColor),material.blend==2?1.f:0.f};
- if(m.mask&&emission[4]>0){auto mask=Texture(m.mask);
- // The mask uses the base material's UVs, including repeat and mirror modes.
- const auto tile=material.tile;
- device->SetSamplerState(1,D3DSAMP_ADDRESSU,(tile&4)?D3DTADDRESS_MIRROR:((tile&1)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));
- device->SetSamplerState(1,D3DSAMP_ADDRESSV,(tile&8)?D3DTADDRESS_MIRROR:((tile&2)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP));
- device->SetTexture(1,mask);if(!mask)emission[4]=0;else if(worldLogEnabled)++envEmissiveMasks;}else device->SetTexture(1,nullptr);
+ IDirect3DTexture9* mask=nullptr;
+ const bool masked=m.mask&&emission[4]>0;
+ if(masked){
+  mask=Texture(m.mask);
+  // The mask uses the base material's UVs, including repeat and mirror modes.
+  const auto tile=material.tile;
+  const auto u=(tile&4)?D3DTADDRESS_MIRROR:((tile&1)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP);
+  const auto v=(tile&8)?D3DTADDRESS_MIRROR:((tile&2)?D3DTADDRESS_WRAP:D3DTADDRESS_CLAMP);
+  if(bindings)bindings->SetMaskAddress(u,v);
+  else{device->SetSamplerState(1,D3DSAMP_ADDRESSU,u);device->SetSamplerState(1,D3DSAMP_ADDRESSV,v);}
+ }
+ if(bindings)bindings->SetMaskTexture(mask);else device->SetTexture(1,mask);
+ if(masked){if(!mask)emission[4]=0;else if(worldLogEnabled)++envEmissiveMasks;}
  envSurfaceSubmit.emission.bind(emission,[](const float* values,unsigned count){return SUCCEEDED(device->SetPixelShaderConstantF(7,values,count));});
  envRoadSettings[0]=!envRoadReflectionPass&&EnvironmentRoadMaterial(hash)?1.f:0.f;
  envSurfaceSubmit.road.bind(envRoadSettings,[](const float* values,unsigned count){return SUCCEEDED(device->SetPixelShaderConstantF(86,values,count));});
@@ -267,8 +300,8 @@ static void SetEnvironmentSurface(unsigned hash){if(envSurfaceSet&&envSurfaceHas
  if(hash==0x5FA9D9B5){signal[0]=88.f/512;signal[1]=88.f/512;signal[2]=58.f/512;other[0]=220.f/512;other[1]=88.f/512;other[2]=350.f/512;other[3]=88.f/512;}else if(hash==0x123A6814){signal[0]=86.f/512;signal[1]=82.f/512;signal[2]=72.f/512;other[0]=256.f/512;other[1]=82.f/512;other[2]=427.f/512;other[3]=82.f/512;}else if(hash==0x5FA9D574){signal[0]=177.f/256;signal[1]=132.f/256;signal[2]=14.f/256;other[0]=177.f/256;other[1]=169.f/256;other[2]=177.f/256;other[3]=207.f/256;}if(signal[2]>0)signal[3]=*(int*)0x91601C==-1?1.f:0.f;
  envSurfaceSubmit.signal.bind(signal,[](const float* values,unsigned count){return SUCCEEDED(device->SetPixelShaderConstantF(82,values,count));});
 }
-static void SetEnvironmentMaterial(unsigned hash,const EnvironmentMeshLights& meshLights,const Mesh* bounds=nullptr,unsigned preparedMask=~0u){
- SetEnvironmentSurface(hash);if(envDepthPass)return;SetEnvironmentDynamicLights(bounds,preparedMask);
+static void SetEnvironmentMaterial(unsigned hash,const EnvironmentMeshLights& meshLights,const Mesh* bounds=nullptr,unsigned preparedMask=~0u,TerrainDeviceState* bindings=nullptr){
+ SetEnvironmentSurface(hash,bindings);if(envDepthPass)return;SetEnvironmentDynamicLights(bounds,preparedMask);
  const auto& nearby=envNight?meshLights.night:meshLights.day;
  if(envLocalSet&&envLocalIndices==nearby)return;
  envLocalSet=true;envLocalIndices=nearby;

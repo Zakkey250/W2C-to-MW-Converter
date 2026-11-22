@@ -22,7 +22,7 @@ from preflight import (
     sunset_config, sunset_row, texwizard_settings,
 )
 from package_layout import CORE, RULES, STREAM, stream_digest, target_core
-from components import LB_ARCHIVE
+from components import LB_ARCHIVE, VCACHE_ARCHIVE, VCACHE_FILES, VCACHE_GUIDE
 
 
 CONTROL = "W2CMWPublic"
@@ -47,27 +47,39 @@ def component_paths():
                 f"{CONTROL}/Optional/AddOn/INSTALL.txt",
                 *(f"{CONTROL}/Optional/AddOn/game/{name}" for name in roads),
                 f"{CONTROL}/Optional/LBx64/{LB_ARCHIVE}",
-                f"{CONTROL}/Optional/LBx64/README-LBx64.txt")
-    from install_components import legacy_lb_paths
-    return (*roads, *lb, *optional, *legacy_lb_paths(), COMPONENT_STATE)
+                f"{CONTROL}/Optional/LBx64/README-LBx64.txt",
+                f"{CONTROL}/Optional/VCache/{VCACHE_ARCHIVE}",
+                f"{CONTROL}/Optional/VCache/{VCACHE_GUIDE}")
+    from install_components import LB_MODULES, VCACHE_MODULES, legacy_module_paths
+    return (*roads, *lb, *VCACHE_FILES, *optional, *legacy_module_paths(LB_MODULES + VCACHE_MODULES), COMPONENT_STATE)
 
 
 FILES_TO_COMMIT += component_paths()
 
 
 def allowed_component(name):
-    from install_components import legacy_lb_path
-    return name in FILES_TO_COMMIT or legacy_lb_path(name)
+    from install_components import LB_MODULES, VCACHE_MODULES, legacy_module_path
+    return name in FILES_TO_COMMIT or legacy_module_path(name, LB_MODULES + VCACHE_MODULES)
 
 SUNSET_TO_COMMIT = (*SUNSET_FILES, TEXWIZARD_CONFIG, TEXWIZARD_ASI)
 SUNSET_TRANSACTION = f"{CONTROL}/sunset-transaction.json"
-DEFAULT_INI = (b"[Debug]\r\nLogging=0\r\n\r\n[Renderer]\r\n"
-               b"ForwardDrawMeters=1000\r\nForwardPrefetchMeters=1200\r\nForwardFadeMs=250\r\n"
-               b"FrameTelemetry=0\r\nProfilePresent=0\r\n\r\n[Streaming]\r\nResidentGeometryViews=1\r\n")
+DEFAULT_INI = (
+    "; Restart the game to apply changes. / 設定変更後はゲームを再起動してください。\r\n"
+    "[Debug]\r\n; Detailed logging (0/1). / 詳細ログの有効化（0/1）。\r\nLogging=0\r\n\r\n"
+    "[Renderer]\r\n; Forward draw distance in meters. / 進行方向の描画距離（メートル）。\r\n"
+    "ForwardDrawMeters=1000\r\n; Forward prefetch distance in meters. / 進行方向の先読み距離（メートル）。\r\n"
+    "ForwardPrefetchMeters=1200\r\n; Draw distance fade in milliseconds. / 描画切り替えのフェード時間（ミリ秒）。\r\n"
+    "ForwardFadeMs=250\r\n; Frame telemetry when logging is enabled. / ログ有効時のフレーム計測。\r\n"
+    "FrameTelemetry=0\r\n; Present timing when logging is enabled. / ログ有効時の画面出力時間の記録。\r\n"
+    "ProfilePresent=0\r\n\r\n[Streaming]\r\n"
+    "; Keep geometry views mapped (0/1). / 地形ジオメトリをマッピングしたまま保持します（0/1）。\r\n"
+    "ResidentGeometryViews=1\r\n"
+).encode("utf-16")
 MIN_FREE_BYTES = 50 * 1024**3
 # These previews use the same verified world format. Install the converter's
 # current ASI after validating the selected package's own manifest and assets.
 UPGRADEABLE_PREVIEWS = {
+    "7093c13166effd367f9be1af83fbe3aac9e84445b8eefca8ec039eb4a14be1da",
     "76bb735bced9afdc46099a0d4aaa7adbb3cfe222f1511b8dbafcac28168a5220",
     "f76d7f02a63b14f989a1ddae89fcda5a03bcf72b24bda48fde4c20f3c2259b89",
     "cd8af723b1e266edf612d26064dcb13c230c6a33319df61db91e1a987af698d8",
@@ -564,7 +576,7 @@ def uninstall(mw):
         return True
 
 
-def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64=False):
+def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64=False, vcache=False):
     from build_world import RUNTIME_ASI, Reader, mw_inputs
     from pursuit import PROP_TEXTURES
 
@@ -645,9 +657,9 @@ def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64
                 raise ValueError(f"Original MW backup fingerprint differs: {name}")
         new_generation_bytes = sum(row["bytes"] for row in package_info["files"])
         stage_budget = 64 * 1024**2 + 3 * sum(under(mw, name).stat().st_size for name in protected_core)
-        if package_info.get("optionalFiles"):
+        if package_info.get("optionalFiles") or vcache:
             from install_components import space_budget
-            stage_budget += space_budget(package, mw, lbx64=lbx64)
+            stage_budget += space_budget(package, mw, lbx64=lbx64, vcache=vcache)
         generation_index = under(mw, f"{CONTROL}/generations/{package_info['buildId']}/World/L5RA.w2i")
         if shutil.disk_usage(mw).free < MIN_FREE_BYTES + stage_budget + (0 if generation_index.exists() else new_generation_bytes):
             raise ValueError("Insufficient space for the generated world and rollback while retaining 50 GiB free.")
@@ -690,7 +702,7 @@ def install(package, mw, *, language=None, mw_reference=None, addon=False, lbx64
             raise ValueError("The rollback executable is missing from the converter.")
         changes[MANIFEST] = json_bytes(installation)
         from install_components import plan_components
-        component_changes, components = plan_components(package, mw, addon=addon, lbx64=lbx64)
+        component_changes, components = plan_components(package, mw, addon=addon, lbx64=lbx64, vcache=vcache)
         changes.update(component_changes)
         # The accepted ASI deliberately rejects unknown installation fields.
         # Optional component metadata lives in components.json instead.
@@ -719,6 +731,7 @@ def main():
     parser.add_argument("--reduce-existing-glare", action="store_true")
     parser.add_argument("--addon", action="store_true")
     parser.add_argument("--lbx64", action="store_true")
+    parser.add_argument("--vcache", action="store_true")
     args = parser.parse_args()
     try:
         mw = checked_folder(args.mw)
@@ -732,7 +745,7 @@ def main():
             print(json.dumps(install_sunset(mw, sunset, texwizard, reduce_existing_glare=args.reduce_existing_glare)))
         else:
             print(json.dumps(install(checked_folder(args.package), mw, mw_reference=checked_folder(args.mw_reference),
-                                     addon=args.addon, lbx64=args.lbx64)))
+                                     addon=args.addon, lbx64=args.lbx64, vcache=args.vcache)))
     except (OSError, ValueError, KeyError, BadZipFile, subprocess.CalledProcessError) as error:
         parser.exit(2, f"{error}\n")
 

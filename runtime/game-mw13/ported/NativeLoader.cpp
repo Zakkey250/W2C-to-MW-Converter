@@ -684,7 +684,7 @@ if(!SourceDeploymentAllowed())return;
 #endif
  if(GetModuleHandleA("NFSMWMapLoader.asi")){Log("REFUSED both map loaders enabled");return;}
  // Keep the installed MOD chain's D3DX load order. Unlimiter's startup
- // patches stalled without this preload in the current sandbox (trial 163).
+ // patches need this preload to complete.
  // DDS decoding and uploads below are still implemented by this loader.
  if(!LoadLibraryA("d3dx9_43.dll")){Log("REFUSED D3DX compatibility preload");return;}
 

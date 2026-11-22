@@ -146,7 +146,7 @@ static PagedDrawStats DrawPagedTerrain(Vec3 eye,const RenderFrustum& frustum,con
    const auto distance=prepared?prepared->distance:Distance(bounds,eye);
    if(plan.validating()&&distance!=Distance(bounds,eye))++W2C_TerrainPrepStatusV1.mismatches;
    if(extendedDraw&&distance>terrainForwardRange*terrainForwardRange){++stats.rangeSkipped;continue;}
-   const bool nightOverlay=envNightOverlays.count(draw.texture)!=0;
+   const bool nightOverlay=EnvironmentNightOverlayOf(draw.texture);
    if(nightOverlay&&(!envNight||envDepthPass)){++stats.nightSkipped;continue;}
    if(reflection){auto extent=Sub(draw.maximum,draw.minimum);Vec3 mid{(draw.minimum.x+draw.maximum.x)*.5f,(draw.minimum.y+draw.maximum.y)*.5f,(draw.minimum.z+draw.maximum.z)*.5f};auto delta=Sub(mid,eye);if(Dot(extent,extent)*.25f<Dot(delta,delta)/65536.f)continue;}
    if(draw.texture&&!Texture(draw.texture))continue;
@@ -198,7 +198,7 @@ static PagedDrawStats DrawPagedTerrain(Vec3 eye,const RenderFrustum& frustum,con
     }
     bool merge=batch==&block&&first+count==span.local&&same&&opacity==boundOpacity&&(!environment||envDepthPass||(lastLights==activeLights&&(!boundedLights||lightMask==envDynamicMask)));
     if(merge){count+=span.count;continue;}flush();bindShader(opacity,false);
-    if(!same){if(cacheMaterials)ApplyTerrainMaterial(bindings,draw.texture);else SetMaterial(draw.texture);if(!environment&&envFrames.count(draw.texture))device->SetTexture(0,Texture(EnvironmentTexture(draw.texture)));
+    if(!same){if(cacheMaterials)ApplyTerrainMaterial(bindings,draw.texture);else SetMaterial(draw.texture);if(!environment&&EnvironmentFrameOf(draw.texture))device->SetTexture(0,Texture(EnvironmentTexture(draw.texture)));
      const bool window=nightOverlay&&environment&&IsEnvironmentWindowLayer(draw.texture);
      if(window!=windowClipSet){device->SetVertexShaderConstantF(0,window?&windowClip._11:&clip._11,4);windowClipSet=window;}
      if(nightOverlay){
@@ -213,7 +213,7 @@ static PagedDrawStats DrawPagedTerrain(Vec3 eye,const RenderFrustum& frustum,con
      }
      lastMaterial=draw.texture;materialSet=true;
     }
-    if(environment){if(!same||!environmentSet||lastLights!=activeLights){bindings.SetTexture(0,Texture(EnvironmentTexture(draw.texture)));SetEnvironmentMaterial(draw.texture,draw.lights,&m,lightMask);lastLights=activeLights;environmentSet=true;}else SetEnvironmentDynamicLights(&m,lightMask);}
+    if(environment){if(!same||!environmentSet||lastLights!=activeLights){bindings.SetTexture(0,Texture(EnvironmentTexture(draw.texture)));SetEnvironmentMaterial(draw.texture,draw.lights,&m,lightMask,&bindings);lastLights=activeLights;environmentSet=true;}else SetEnvironmentDynamicLights(&m,lightMask);}
     batch=&block;first=span.local;count=span.count;
    }
    if(worldLogEnabled){

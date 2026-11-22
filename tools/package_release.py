@@ -12,6 +12,8 @@ REQUIRED = {"W2C-to-MW-Converter.exe", "_internal/bin/W2CMWPublic.asi",
             "_internal/bin/W2CMWv2Repack.exe", "_internal/bin/PublicVault.exe",
             "_internal/bin/W2CMW-Rollback.exe", "_internal/base_library.zip",
             "_internal/camera-decoder/python312.zip", "_internal/importer-source/tools/sourceworld.lock.json"}
+OPTIONAL = {"optional/LBx64 W2CtoMW RC3.1.zip", "optional/README-LBx64.txt",
+            "optional/NFSMWVCacheAffinity 0.7.1.zip", "optional/README-VCacheAffinity.txt"}
 BIN = {s for s in REQUIRED if s.startswith("_internal/bin/")}
 TOP = {"base_library.zip", "catalog.json", "rules.json", "translations.json", "compiler-identity.json", "components-catalog.json"}
 TREES = {"assets", "camera-decoder", "importer-source", "presets", "_tcl_data", "_tk_data", "tcl8",
@@ -20,7 +22,7 @@ BLOCKED = {".log", ".bun", ".moo", ".sav", ".lzc", ".ini", ".pdb"}
 
 def allowed(name):
     p = Path(name)
-    if name in {"optional/LBx64 W2CtoMW RC3.1.zip", "optional/README-LBx64.txt"}:
+    if name in OPTIONAL:
         return True
     if name.startswith("_internal/optional/"):
         source = ROOT / "public-converter" / name.removeprefix("_internal/")
@@ -58,8 +60,8 @@ def main():
             if not allowed(name):
                 raise ValueError(f"Unexpected component: {name}")
             files[name] = f
-    if REQUIRED - files.keys():
-        raise ValueError(f"Missing files: {REQUIRED - files.keys()}")
+    if missing := (REQUIRED | OPTIONAL) - files.keys():
+        raise ValueError(f"Missing files: {missing}")
     files.update({s: ROOT / "public-converter" / s for s in ("QUICKSTART-JA.md", "QUICKSTART-EN.md")})
     files["THIRD_PARTY_NOTICES.md"] = ROOT / "THIRD_PARTY_NOTICES.md"
     files["CHANGELOG-RC6-JA.md"] = ROOT / "CHANGELOG-RC6-JA.md"

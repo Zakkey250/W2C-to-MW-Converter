@@ -99,4 +99,5 @@ if($LASTEXITCODE){throw 'Unable to build the portable converter'}
 if($LASTEXITCODE){throw 'Unable to stage the isolated camera decoder'}
 $optional=Join-Path $build 'portable/W2C-to-MW-Converter/optional'
 New-Item -ItemType Directory -Path $optional -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $desktop 'optional/LBx64/LBx64 W2CtoMW RC3.1.zip'),(Join-Path $desktop 'optional/LBx64/README-LBx64.txt') -Destination $optional -Force
+Copy-Item -LiteralPath (Join-Path $desktop 'optional/LBx64/LBx64 W2CtoMW RC3.1.zip'),(Join-Path $desktop 'optional/LBx64/README-LBx64.txt'),
+    (Join-Path $desktop 'optional/VCache/NFSMWVCacheAffinity 0.7.1.zip'),(Join-Path $desktop 'optional/VCache/README-VCacheAffinity.txt') -Destination $optional -Force
